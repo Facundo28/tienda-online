@@ -30,6 +30,7 @@ export function CreateProductModal() {
   const [imageUrl, setImageUrl] = useState("");
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const lastObjectUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -60,6 +61,22 @@ export function CreateProductModal() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, close]);
 
+  const setPreviewFromFile = useCallback((file: File | null) => {
+    if (lastObjectUrlRef.current) {
+      URL.revokeObjectURL(lastObjectUrlRef.current);
+      lastObjectUrlRef.current = null;
+    }
+
+    if (!file) {
+      setFilePreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    lastObjectUrlRef.current = objectUrl;
+    setFilePreviewUrl(objectUrl);
+  }, []);
+
   return (
     <>
       <button
@@ -84,7 +101,7 @@ export function CreateProductModal() {
             onClick={close}
           />
 
-          <div className="relative z-10 w-full max-w-lg rounded-2xl border bg-background p-6">
+          <div className="relative z-10 w-full max-w-4xl rounded-2xl border bg-background p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id={titleId} className="text-lg font-semibold">
@@ -111,7 +128,7 @@ export function CreateProductModal() {
                 close();
               }}
             >
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_220px]">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_360px]">
                 <div className="grid grid-cols-1 gap-3">
                   <input
                     className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -163,28 +180,39 @@ export function CreateProductModal() {
                       Foto (opcional)
                     </label>
                     <input
+                      ref={fileInputRef}
                       id="image"
-                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      className="sr-only"
                       name="image"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       onChange={(e) => {
                         const file = e.currentTarget.files?.[0] ?? null;
-                        if (!file) {
-                          setFilePreviewUrl(null);
-                          return;
-                        }
-
-                        if (lastObjectUrlRef.current) {
-                          URL.revokeObjectURL(lastObjectUrlRef.current);
-                          lastObjectUrlRef.current = null;
-                        }
-
-                        const objectUrl = URL.createObjectURL(file);
-                        lastObjectUrlRef.current = objectUrl;
-                        setFilePreviewUrl(objectUrl);
+                        setPreviewFromFile(file);
                       }}
                     />
+                    <label
+                      htmlFor="image"
+                      className="flex cursor-pointer flex-col items-center justify-center rounded-md border bg-background px-3 py-6 text-sm font-medium hover:bg-foreground/5"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0] ?? null;
+                        if (!file) return;
+
+                        if (fileInputRef.current) {
+                          const dt = new DataTransfer();
+                          dt.items.add(file);
+                          fileInputRef.current.files = dt.files;
+                        }
+
+                        setPreviewFromFile(file);
+                      }}
+                    >
+                      Agregar foto o arrastrar
+                    </label>
                     <div className="text-xs text-foreground/60">
                       JPG/PNG/WebP · máx 5MB
                     </div>
@@ -217,11 +245,9 @@ export function CreateProductModal() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-foreground/5 p-2">
-                  <div className="text-xs font-medium text-foreground/70">
-                    Preview
-                  </div>
-                  <div className="mt-2 aspect-[4/5] w-full overflow-hidden rounded-xl border bg-background">
+                <div className="rounded-2xl border bg-foreground/5 p-3">
+                  <div className="text-xs font-medium text-foreground/70">Preview</div>
+                  <div className="mt-2 h-[420px] w-full overflow-hidden rounded-xl border bg-background">
                     {filePreviewUrl || imageUrl.trim() ? (
                       <img
                         src={normalizeImageSrc(filePreviewUrl ?? imageUrl)}
