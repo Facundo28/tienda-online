@@ -16,7 +16,7 @@ export async function SiteHeader() {
           Tienda online
         </Link>
 
-        <form action="/products" method="get" className="hidden w-full max-w-xl md:block">
+        <form action="/products" method="get" className="hidden w-full max-w-sm md:block">
           <label className="sr-only" htmlFor="navbar-search">
             Buscar
           </label>
@@ -72,7 +72,7 @@ export async function SiteHeader() {
 
       <div className="border-t md:hidden">
         <div className="mx-auto max-w-6xl px-6 py-3">
-          <form action="/products" method="get">
+          <form action="/products" method="get" className="mx-auto max-w-sm">
             <label className="sr-only" htmlFor="navbar-search-mobile">
               Buscar
             </label>
