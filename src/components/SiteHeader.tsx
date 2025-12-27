@@ -20,10 +20,10 @@ export async function SiteHeader() {
           {user ? (
             <>
               <div className="flex items-center gap-2">
+                <ProductsCategorySelect />
                 <Link href="/products" className={navLinkClass}>
                   Productos
                 </Link>
-                <ProductsCategorySelect />
               </div>
               <Link href="/cart" className={navLinkClass}>
                 Carrito
