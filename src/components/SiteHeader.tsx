@@ -10,7 +10,7 @@ export async function SiteHeader() {
   const user = await getCurrentUser();
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="text-base font-semibold tracking-tight">
           Tienda online
         </Link>
