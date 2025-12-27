@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { answerProductQuestion, createProductQuestion } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,15 @@ function normalizeImageSrc(src: string) {
   if (src.startsWith("http")) return src;
   if (src.startsWith("/")) return src;
   return `/${src}`;
+}
+
+function parseImageUrls(raw: string | null | undefined) {
+  if (!raw) return [];
+  return raw
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(normalizeImageSrc);
 }
 
 function initials(name: string) {
@@ -58,7 +68,7 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
 
   if (!product || !product.isActive) notFound();
 
-  const imageSrc = product.imageUrl ? normalizeImageSrc(product.imageUrl) : null;
+  const imageUrls = parseImageUrls(product.imageUrl);
   const owner = product.user as
     | { id: string; name: string; avatarUrl: string | null }
     | null
@@ -92,22 +102,7 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
         <div className="overflow-hidden rounded-2xl border bg-background">
-          <div className="relative aspect-[4/3] w-full bg-foreground/5">
-            {imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 66vw"
-                unoptimized={imageSrc.startsWith("/uploads/")}
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-foreground/60">
-                Sin imagen
-              </div>
-            )}
-          </div>
+          <ProductImageGallery imageUrls={imageUrls} alt={product.name} />
 
           <div className="p-5">
             <div className="text-sm text-foreground/70">Categoría: {product.category}</div>
