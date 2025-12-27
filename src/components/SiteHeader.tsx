@@ -16,12 +16,16 @@ export async function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          <Link href="/products" className={navLinkClass}>
-            Productos
-          </Link>
-          <Link href="/cart" className={navLinkClass}>
-            Carrito
-          </Link>
+          {user ? (
+            <>
+              <Link href="/products" className={navLinkClass}>
+                Productos
+              </Link>
+              <Link href="/cart" className={navLinkClass}>
+                Carrito
+              </Link>
+            </>
+          ) : null}
 
           {!user ? (
             <>

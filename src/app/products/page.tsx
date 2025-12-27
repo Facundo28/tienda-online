@@ -3,7 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ function initials(name: string) {
 }
 
 export default async function ProductsPage() {
-  const user = await getCurrentUser();
+  const user = await requireUser();
   const products = (await prisma.product.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
