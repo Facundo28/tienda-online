@@ -17,18 +17,22 @@ type FormState = {
   postalCode: string;
 };
 
-export function CheckoutClient() {
+export function CheckoutClient({
+  initialForm,
+}: {
+  initialForm?: Partial<FormState>;
+}) {
   const { cart, totals, clear } = useCart();
-  const [form, setForm] = useState<FormState>({
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
-    addressLine1: "",
-    addressLine2: "",
-    city: "",
-    state: "",
-    postalCode: "",
-  });
+  const [form, setForm] = useState<FormState>(() => ({
+    customerName: initialForm?.customerName ?? "",
+    customerEmail: initialForm?.customerEmail ?? "",
+    customerPhone: initialForm?.customerPhone ?? "",
+    addressLine1: initialForm?.addressLine1 ?? "",
+    addressLine2: initialForm?.addressLine2 ?? "",
+    city: initialForm?.city ?? "",
+    state: initialForm?.state ?? "",
+    postalCode: initialForm?.postalCode ?? "",
+  }));
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

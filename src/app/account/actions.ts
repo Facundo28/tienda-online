@@ -50,6 +50,13 @@ export async function updateProfile(formData: FormData) {
   const email = normalizeEmail(emailRaw);
   const avatarFile = formData.get("avatar");
 
+  const phone = String(formData.get("customerPhone") || "").trim();
+  const addressLine1 = String(formData.get("addressLine1") || "").trim();
+  const addressLine2 = String(formData.get("addressLine2") || "").trim();
+  const city = String(formData.get("city") || "").trim();
+  const state = String(formData.get("state") || "").trim();
+  const postalCode = String(formData.get("postalCode") || "").trim();
+
   if (!name) throw new Error("El nombre es requerido");
   if (!email || !email.includes("@")) {
     throw new Error("Email inválido");
@@ -72,11 +79,18 @@ export async function updateProfile(formData: FormData) {
     data: {
       name,
       email,
+      phone: phone || null,
+      addressLine1: addressLine1 || null,
+      addressLine2: addressLine2 || null,
+      city: city || null,
+      state: state || null,
+      postalCode: postalCode || null,
       ...(avatarUrl ? { avatarUrl } : {}),
     },
   });
 
   revalidatePath("/account");
+  revalidatePath("/checkout");
   revalidatePath("/");
   redirect("/account");
 }

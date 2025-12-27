@@ -90,6 +90,93 @@ export default async function AccountPage() {
             />
           </div>
 
+          <div className="mt-2">
+            <div className="text-sm font-semibold">Datos para checkout</div>
+            <div className="text-xs text-foreground/60">
+              Se usarán para autocompletar cuando compres.
+            </div>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium" htmlFor="customerPhone">
+              Teléfono
+            </label>
+            <input
+              id="customerPhone"
+              name="customerPhone"
+              defaultValue={user.phone ?? ""}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Teléfono (opcional)"
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium" htmlFor="addressLine1">
+              Dirección
+            </label>
+            <input
+              id="addressLine1"
+              name="addressLine1"
+              defaultValue={user.addressLine1 ?? ""}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Dirección"
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium" htmlFor="addressLine2">
+              Depto / piso
+            </label>
+            <input
+              id="addressLine2"
+              name="addressLine2"
+              defaultValue={user.addressLine2 ?? ""}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Depto / piso (opcional)"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid gap-1">
+              <label className="text-sm font-medium" htmlFor="city">
+                Ciudad
+              </label>
+              <input
+                id="city"
+                name="city"
+                defaultValue={user.city ?? ""}
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="Ciudad"
+              />
+            </div>
+
+            <div className="grid gap-1">
+              <label className="text-sm font-medium" htmlFor="state">
+                Estado/Provincia
+              </label>
+              <input
+                id="state"
+                name="state"
+                defaultValue={user.state ?? ""}
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="Estado/Provincia"
+              />
+            </div>
+
+            <div className="grid gap-1">
+              <label className="text-sm font-medium" htmlFor="postalCode">
+                Código postal
+              </label>
+              <input
+                id="postalCode"
+                name="postalCode"
+                defaultValue={user.postalCode ?? ""}
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="Código postal"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             className="inline-flex items-center justify-center rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
