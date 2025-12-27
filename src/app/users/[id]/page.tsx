@@ -15,6 +15,15 @@ function normalizeImageSrc(src: string) {
   return `/${src}`;
 }
 
+function firstImageUrl(raw: string | null) {
+  if (!raw) return null;
+  const first = raw
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
+  return first ? normalizeImageSrc(first) : null;
+}
+
 function initials(name: string) {
   const parts = name.trim().split(" ").filter(Boolean);
   const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase());
@@ -104,7 +113,7 @@ export default async function PublicUserProfilePage({
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {profile.products.map((p) => {
-            const imageSrc = p.imageUrl ? normalizeImageSrc(p.imageUrl) : null;
+            const imageSrc = firstImageUrl(p.imageUrl);
 
             return (
               <li key={p.id} className="overflow-hidden rounded-2xl border bg-background">

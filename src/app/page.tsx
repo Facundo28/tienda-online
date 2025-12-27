@@ -12,6 +12,15 @@ function normalizeImageSrc(src: string) {
   return `/${src}`;
 }
 
+function firstImageUrl(raw: string | null) {
+  if (!raw) return null;
+  const first = raw
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
+  return first ? normalizeImageSrc(first) : null;
+}
+
 export default async function Home() {
   const user = await getCurrentUser();
 
@@ -85,7 +94,7 @@ export default async function Home() {
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((p) => {
-              const imageSrc = p.imageUrl ? normalizeImageSrc(p.imageUrl) : null;
+              const imageSrc = firstImageUrl(p.imageUrl);
               const href = user ? `/products/${p.id}` : "/login";
 
               return (

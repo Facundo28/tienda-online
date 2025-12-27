@@ -17,6 +17,15 @@ function normalizeImageSrc(src: string) {
   return `/${src}`;
 }
 
+function firstImageUrl(raw: string | null) {
+  if (!raw) return null;
+  const first = raw
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
+  return first ? normalizeImageSrc(first) : null;
+}
+
 function formatCategory(value: string) {
   switch (value) {
     case "INDUMENTARIA":
@@ -78,16 +87,14 @@ export default async function AdminProductsPage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-4">
                       <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border bg-foreground/5">
-                        {p.imageUrl ? (
+                        {firstImageUrl(p.imageUrl) ? (
                           <Image
-                            src={normalizeImageSrc(p.imageUrl)}
+                            src={firstImageUrl(p.imageUrl) ?? ""}
                             alt={p.name}
                             fill
                             className="object-cover"
                             sizes="80px"
-                            unoptimized={normalizeImageSrc(p.imageUrl).startsWith(
-                              "/uploads/",
-                            )}
+                            unoptimized={(firstImageUrl(p.imageUrl) ?? "").startsWith("/uploads/")}
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-xs text-foreground/60">

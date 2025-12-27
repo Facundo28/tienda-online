@@ -91,6 +91,14 @@ export function EditProductModal({ product }: { product: EditableProduct }) {
     setFilePreviewUrl(objectUrl);
   }, []);
 
+  const setPreviewFromFiles = useCallback(
+    (files: FileList | null) => {
+      const first = files?.[0] ?? null;
+      setPreviewFromFile(first);
+    },
+    [setPreviewFromFile],
+  );
+
   return (
     <>
       <button
@@ -200,12 +208,12 @@ export function EditProductModal({ product }: { product: EditableProduct }) {
                       ref={fileInputRef}
                       id={`image-${product.id}`}
                       className="sr-only"
-                      name="image"
+                      name="images"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
+                      multiple
                       onChange={(e) => {
-                        const file = e.currentTarget.files?.[0] ?? null;
-                        setPreviewFromFile(file);
+                        setPreviewFromFiles(e.currentTarget.files);
                       }}
                     />
                     <label
@@ -216,16 +224,16 @@ export function EditProductModal({ product }: { product: EditableProduct }) {
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        const file = e.dataTransfer.files?.[0] ?? null;
-                        if (!file) return;
+                        const files = e.dataTransfer.files;
+                        if (!files || files.length === 0) return;
 
                         if (fileInputRef.current) {
                           const dt = new DataTransfer();
-                          dt.items.add(file);
+                          Array.from(files).forEach((f) => dt.items.add(f));
                           fileInputRef.current.files = dt.files;
                         }
 
-                        setPreviewFromFile(file);
+                        setPreviewFromFiles(files);
                       }}
                     >
                       Agregar foto o arrastrar

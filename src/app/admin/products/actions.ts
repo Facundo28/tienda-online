@@ -42,6 +42,22 @@ async function saveUploadedImage(file: File) {
   return `/uploads/${filename}`;
 }
 
+function parseImageUrlList(raw: string) {
+  return raw
+    .split(/[\n,]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function saveUploadedImages(files: File[]) {
+  const urls: string[] = [];
+  for (const file of files) {
+    if (file.size <= 0) continue;
+    urls.push(await saveUploadedImage(file));
+  }
+  return urls;
+}
+
 function parseCategory(value: FormDataEntryValue | null): ProductCategory {
   if (typeof value !== "string") return ProductCategory.OTROS;
   const raw = value.trim();
@@ -74,16 +90,16 @@ export async function createProduct(formData: FormData) {
   const category = parseCategory(formData.get("category"));
   const priceCents = parsePriceCents(formData);
   const imageUrl = String(formData.get("imageUrl") || "").trim();
-  const imageFile = formData.get("image");
+  const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
 
   if (!name || !description || !priceCents) {
     throw new Error("Nombre, descripción y precio son requeridos");
   }
 
-  let finalImageUrl: string | null = imageUrl || null;
-  if (imageFile instanceof File && imageFile.size > 0) {
-    finalImageUrl = await saveUploadedImage(imageFile);
-  }
+  const manualUrls = imageUrl ? parseImageUrlList(imageUrl) : [];
+  const uploadedUrls = imageFiles.length > 0 ? await saveUploadedImages(imageFiles) : [];
+  const finalUrls = [...uploadedUrls, ...manualUrls];
+  const finalImageUrl: string | null = finalUrls.length > 0 ? finalUrls.join("\n") : null;
 
   await prisma.product.create({
     data: {
@@ -142,20 +158,17 @@ export async function updateProduct(productId: string, formData: FormData) {
   const priceCents = parsePriceCents(formData);
 
   const imageUrl = String(formData.get("imageUrl") || "").trim();
-  const imageFile = formData.get("image");
+  const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
 
   if (!name || !description || !priceCents) {
     throw new Error("Nombre, descripción y precio son requeridos");
   }
 
-  let nextImageUrl: string | null | undefined = undefined;
-  if (imageFile instanceof File && imageFile.size > 0) {
-    nextImageUrl = await saveUploadedImage(imageFile);
-  } else if (imageUrl) {
-    nextImageUrl = imageUrl;
-  } else {
-    nextImageUrl = existing.imageUrl;
-  }
+  const existingUrls = existing.imageUrl ? parseImageUrlList(existing.imageUrl) : [];
+  const baseUrls = imageUrl ? parseImageUrlList(imageUrl) : existingUrls;
+  const uploadedUrls = imageFiles.length > 0 ? await saveUploadedImages(imageFiles) : [];
+  const nextUrls = [...baseUrls, ...uploadedUrls];
+  const nextImageUrl: string | null = nextUrls.length > 0 ? nextUrls.join("\n") : null;
 
   await prisma.product.update({
     where: { id: productId },
