@@ -8,6 +8,12 @@ export const dynamic = "force-dynamic";
 
 type ProductRow = Awaited<ReturnType<(typeof prisma.product.findMany)>>[number];
 
+function normalizeImageSrc(src: string) {
+  if (src.startsWith("http")) return src;
+  if (src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
 export default async function ProductsPage() {
   const products = (await prisma.product.findMany({
     where: { isActive: true },
@@ -41,33 +47,30 @@ export default async function ProductsPage() {
         </div>
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((p: ProductRow) => (
-            <li
-              key={p.id}
-              className="overflow-hidden rounded-2xl border bg-background"
-            >
-              <div className="relative aspect-[4/3] w-full bg-foreground/5">
-                {p.imageUrl ? (
-                  <Image
-                    src={
-                      p.imageUrl.startsWith("http")
-                        ? p.imageUrl
-                        : p.imageUrl.startsWith("/")
-                          ? p.imageUrl
-                          : `/${p.imageUrl}`
-                    }
-                    alt={p.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 50vw, 33vw"
-                    unoptimized={p.imageUrl.startsWith("/uploads/")}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-foreground/60">
-                    Sin imagen
-                  </div>
-                )}
-              </div>
+          {products.map((p: ProductRow) => {
+            const imageSrc = p.imageUrl ? normalizeImageSrc(p.imageUrl) : null;
+
+            return (
+              <li
+                key={p.id}
+                className="overflow-hidden rounded-2xl border bg-background"
+              >
+                <div className="relative aspect-[4/3] w-full bg-foreground/5">
+                  {imageSrc ? (
+                    <Image
+                      src={imageSrc}
+                      alt={p.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 50vw, 33vw"
+                      unoptimized={imageSrc.startsWith("/uploads/")}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-foreground/60">
+                      Sin imagen
+                    </div>
+                  )}
+                </div>
 
               <div className="p-5">
                 <div className="font-semibold truncate">{p.name}</div>
@@ -84,8 +87,9 @@ export default async function ProductsPage() {
                   />
                 </div>
               </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
