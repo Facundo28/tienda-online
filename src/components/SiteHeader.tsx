@@ -45,16 +45,12 @@ export async function SiteHeader() {
               <Link href="/admin/products" className={navLinkClass}>
                 Mis publicaciones
               </Link>
-              {user.role === "ADMIN" ? (
-                <Link href="/admin/users" className={navLinkClass}>
-                  Usuarios
-                </Link>
-              ) : null}
               <UserMenu
                 user={{
                   name: user.name,
                   email: user.email,
                   avatarUrl: user.avatarUrl,
+                  role: user.role,
                 }}
               />
             </>

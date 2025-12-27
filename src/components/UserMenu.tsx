@@ -8,6 +8,7 @@ type UserMenuUser = {
   name: string;
   email: string;
   avatarUrl: string | null;
+  role?: "USER" | "ADMIN" | string;
 };
 
 function normalizeImageSrc(src: string) {
@@ -63,6 +64,15 @@ export function UserMenu({ user }: { user: UserMenuUser }) {
           >
             Mi perfil
           </Link>
+
+          {user.role === "ADMIN" ? (
+            <Link
+              href="/admin/users"
+              className="rounded-md px-3 py-2 text-sm font-medium hover:bg-foreground/5"
+            >
+              Usuarios
+            </Link>
+          ) : null}
 
           <button
             type="button"
