@@ -3,6 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ function normalizeImageSrc(src: string) {
 }
 
 export default async function ProductsPage() {
+  const user = await getCurrentUser();
   const products = (await prisma.product.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
@@ -74,6 +76,13 @@ export default async function ProductsPage() {
 
               <div className="p-5">
                 <div className="font-semibold truncate">{p.name}</div>
+                {user ? (
+                  <div className="mt-1 flex justify-end">
+                    <span className="text-xs text-foreground/60 truncate">
+                      {user.name}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="mt-1 text-sm text-foreground/70 line-clamp-2">
                   {p.description}
                 </div>
