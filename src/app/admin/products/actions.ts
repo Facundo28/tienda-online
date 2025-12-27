@@ -7,6 +7,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
+import { ProductCategory } from "@/generated/prisma/client";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -41,10 +42,20 @@ async function saveUploadedImage(file: File) {
   return `/uploads/${filename}`;
 }
 
+function parseCategory(value: FormDataEntryValue | null): ProductCategory {
+  if (typeof value !== "string") return ProductCategory.OTROS;
+  const raw = value.trim();
+  if (Object.values(ProductCategory).includes(raw as ProductCategory)) {
+    return raw as ProductCategory;
+  }
+  return ProductCategory.OTROS;
+}
+
 export async function createProduct(formData: FormData) {
   await requireUser();
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
+  const category = parseCategory(formData.get("category"));
   const priceCents = Math.max(
     0,
     Math.floor(Number(formData.get("priceCents") || 0)),
@@ -65,6 +76,7 @@ export async function createProduct(formData: FormData) {
     data: {
       name,
       description,
+      category,
       priceCents,
       imageUrl: finalImageUrl,
       isActive: true,

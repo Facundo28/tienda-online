@@ -14,6 +14,7 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String
+  category    ProductCategory @default(OTROS)
   priceCents  Int
   imageUrl    String?
   isActive    Boolean  @default(true)
@@ -97,4 +98,14 @@ enum OrderStatus {
 enum UserRole {
   USER
   ADMIN
+}
+
+enum ProductCategory {
+  INDUMENTARIA
+  VEHICULOS
+  INMUEBLES
+  TECNOLOGIA
+  HOGAR
+  SERVICIOS
+  OTROS
 }

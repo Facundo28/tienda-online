@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { requireUser } from "@/lib/auth/session";
+import { ProductCategory } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +22,70 @@ function initials(name: string) {
   return letters.join("") || "U";
 }
 
-export default async function ProductsPage() {
+type ProductsPageProps = {
+  searchParams?: Promise<{ category?: string }>;
+};
+
+function parseCategory(value: string | undefined): ProductCategory | null {
+  if (!value) return null;
+  if (Object.values(ProductCategory).includes(value as ProductCategory)) {
+    return value as ProductCategory;
+  }
+  return null;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const user = await requireUser();
+
+  const resolvedSearchParams = await searchParams;
+  const selectedCategory = parseCategory(resolvedSearchParams?.category);
+
   const products = (await prisma.product.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(selectedCategory ? { category: selectedCategory } : {}),
+    },
     orderBy: { createdAt: "desc" },
   })) as ProductRow[];
+
+  const categories = [
+    { value: "ALL", label: "Todas", href: "/products" },
+    {
+      value: ProductCategory.INDUMENTARIA,
+      label: "Indumentaria",
+      href: "/products?category=INDUMENTARIA",
+    },
+    {
+      value: ProductCategory.VEHICULOS,
+      label: "Vehículos",
+      href: "/products?category=VEHICULOS",
+    },
+    {
+      value: ProductCategory.INMUEBLES,
+      label: "Inmuebles",
+      href: "/products?category=INMUEBLES",
+    },
+    {
+      value: ProductCategory.TECNOLOGIA,
+      label: "Tecnología",
+      href: "/products?category=TECNOLOGIA",
+    },
+    {
+      value: ProductCategory.HOGAR,
+      label: "Hogar",
+      href: "/products?category=HOGAR",
+    },
+    {
+      value: ProductCategory.SERVICIOS,
+      label: "Servicios",
+      href: "/products?category=SERVICIOS",
+    },
+    {
+      value: ProductCategory.OTROS,
+      label: "Otros",
+      href: "/products?category=OTROS",
+    },
+  ] as const;
 
   return (
     <section>
@@ -43,6 +102,31 @@ export default async function ProductsPage() {
         >
           Ver carrito
         </Link>
+      </div>
+
+      <div className="mt-4 rounded-2xl border bg-background p-4">
+        <div className="text-sm font-medium">Categorías</div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {categories.map((c) => {
+            const isActive =
+              c.value === "ALL"
+                ? !selectedCategory
+                : selectedCategory === c.value;
+
+            return (
+              <Link
+                key={c.value}
+                href={c.href}
+                className={
+                  "rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5 " +
+                  (isActive ? "bg-foreground/5" : "")
+                }
+              >
+                {c.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {products.length === 0 ? (

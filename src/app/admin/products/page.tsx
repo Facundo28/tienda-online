@@ -14,6 +14,16 @@ export default async function AdminProductsPage() {
     orderBy: { createdAt: "desc" },
   })) as ProductRow[];
 
+  const categories = [
+    { value: "INDUMENTARIA", label: "Indumentaria" },
+    { value: "VEHICULOS", label: "Vehículos" },
+    { value: "INMUEBLES", label: "Inmuebles" },
+    { value: "TECNOLOGIA", label: "Tecnología" },
+    { value: "HOGAR", label: "Hogar" },
+    { value: "SERVICIOS", label: "Servicios" },
+    { value: "OTROS", label: "Otros" },
+  ] as const;
+
   return (
     <section>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -59,6 +69,27 @@ export default async function AdminProductsPage() {
               min={1}
               required
             />
+
+            <div className="grid gap-1">
+              <label
+                className="text-sm font-medium text-foreground/80"
+                htmlFor="category"
+              >
+                Categoría
+              </label>
+              <select
+                id="category"
+                name="category"
+                defaultValue="OTROS"
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                {categories.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="grid gap-1">
               <label className="text-sm font-medium text-foreground/80" htmlFor="image">
