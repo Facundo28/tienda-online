@@ -39,7 +39,7 @@ export async function SiteHeader() {
           ) : (
             <>
               <Link href="/admin/products" className={navLinkClass}>
-                Administrar productos
+                Mis publicaciones
               </Link>
               {user.role === "ADMIN" ? (
                 <Link href="/admin/users" className={navLinkClass}>

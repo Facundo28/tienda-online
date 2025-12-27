@@ -5,6 +5,7 @@ import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { requireUser } from "@/lib/auth/session";
 import { ProductCategory } from "@/generated/prisma/enums";
+import { CategorySelect } from "./CategorySelect";
 
 export const dynamic = "force-dynamic";
 
@@ -49,41 +50,34 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   })) as ProductRow[];
 
   const categories = [
-    { value: "ALL", label: "Todas", href: "/products" },
+    { value: "ALL", label: "Todas" },
     {
       value: ProductCategory.INDUMENTARIA,
       label: "Indumentaria",
-      href: "/products?category=INDUMENTARIA",
     },
     {
       value: ProductCategory.VEHICULOS,
       label: "Vehículos",
-      href: "/products?category=VEHICULOS",
     },
     {
       value: ProductCategory.INMUEBLES,
       label: "Inmuebles",
-      href: "/products?category=INMUEBLES",
     },
     {
       value: ProductCategory.TECNOLOGIA,
       label: "Tecnología",
-      href: "/products?category=TECNOLOGIA",
     },
     {
       value: ProductCategory.HOGAR,
       label: "Hogar",
-      href: "/products?category=HOGAR",
     },
     {
       value: ProductCategory.SERVICIOS,
       label: "Servicios",
-      href: "/products?category=SERVICIOS",
     },
     {
       value: ProductCategory.OTROS,
       label: "Otros",
-      href: "/products?category=OTROS",
     },
   ] as const;
 
@@ -91,7 +85,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <section>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
+            <CategorySelect
+              options={categories as unknown as { value: string; label: string }[]}
+              selected={selectedCategory ?? "ALL"}
+            />
+          </div>
           <p className="text-sm text-foreground/70">
             Agrega productos al carrito y finaliza tu pedido.
           </p>
@@ -102,31 +102,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         >
           Ver carrito
         </Link>
-      </div>
-
-      <div className="mt-4 rounded-2xl border bg-background p-4">
-        <div className="text-sm font-medium">Categorías</div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {categories.map((c) => {
-            const isActive =
-              c.value === "ALL"
-                ? !selectedCategory
-                : selectedCategory === c.value;
-
-            return (
-              <Link
-                key={c.value}
-                href={c.href}
-                className={
-                  "rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5 " +
-                  (isActive ? "bg-foreground/5" : "")
-                }
-              >
-                {c.label}
-              </Link>
-            );
-          })}
-        </div>
       </div>
 
       {products.length === 0 ? (
