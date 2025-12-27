@@ -36,6 +36,8 @@ model ProductQuestion {
   productId String
   userId    String
   text      String
+  answerText String?
+  answeredAt DateTime?
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)

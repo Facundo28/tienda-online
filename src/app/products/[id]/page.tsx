@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
-import { createProductQuestion } from "./actions";
+import { answerProductQuestion, createProductQuestion } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ type ProductDetailsPageProps = {
 };
 
 export default async function ProductDetailsPage({ params }: ProductDetailsPageProps) {
-  await requireUser();
+  const currentUser = await requireUser();
 
   const { id } = await params;
 
@@ -63,10 +63,13 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
     | { id: string; name: string; avatarUrl: string | null }
     | null
     | undefined;
+  const isOwner = Boolean(owner?.id && owner.id === currentUser.id);
   const ownerAvatarSrc = owner?.avatarUrl ? normalizeImageSrc(owner.avatarUrl) : null;
   const questions = (product.questions ?? []) as Array<{
     id: string;
     text: string;
+    answerText?: string | null;
+    answeredAt?: Date | null;
     createdAt: Date;
     user: { id: string; name: string; avatarUrl: string | null };
   }>;
@@ -229,6 +232,37 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
                   <div className="mt-3 text-sm text-foreground/80 whitespace-pre-wrap">
                     {q.text}
                   </div>
+
+                  {q.answerText ? (
+                    <div className="mt-4 rounded-lg border bg-foreground/5 p-3">
+                      <div className="text-xs font-medium text-foreground/70">
+                        Respuesta del vendedor
+                      </div>
+                      <div className="mt-2 text-sm text-foreground/80 whitespace-pre-wrap">
+                        {q.answerText}
+                      </div>
+                    </div>
+                  ) : isOwner ? (
+                    <form
+                      className="mt-4 grid gap-2"
+                      action={answerProductQuestion.bind(null, q.id)}
+                    >
+                      <textarea
+                        name="answerText"
+                        className="min-h-[70px] rounded-md border bg-background px-3 py-2 text-sm"
+                        placeholder="Responder pregunta..."
+                        required
+                      />
+                      <div>
+                        <button
+                          type="submit"
+                          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
+                        >
+                          Responder
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </li>
               );
             })}
