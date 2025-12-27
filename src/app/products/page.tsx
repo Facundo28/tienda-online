@@ -15,6 +15,12 @@ function normalizeImageSrc(src: string) {
   return `/${src}`;
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase());
+  return letters.join("") || "U";
+}
+
 export default async function ProductsPage() {
   const user = await getCurrentUser();
   const products = (await prisma.product.findMany({
@@ -76,15 +82,37 @@ export default async function ProductsPage() {
 
               <div className="p-5">
                 <div className="font-semibold truncate">{p.name}</div>
-                {user ? (
-                  <div className="mt-1 flex justify-end">
-                    <span className="text-xs text-foreground/60 truncate">
-                      {user.name}
-                    </span>
+
+                <div className="mt-1 flex items-start justify-between gap-3">
+                  <div className="text-sm text-foreground/70 line-clamp-2 min-w-0">
+                    {p.description}
                   </div>
-                ) : null}
-                <div className="mt-1 text-sm text-foreground/70 line-clamp-2">
-                  {p.description}
+
+                  {user ? (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="relative h-5 w-5 overflow-hidden rounded-full border bg-foreground/5">
+                        {user.avatarUrl ? (
+                          <Image
+                            src={normalizeImageSrc(user.avatarUrl)}
+                            alt={user.name}
+                            fill
+                            className="object-cover"
+                            sizes="20px"
+                            unoptimized={normalizeImageSrc(user.avatarUrl).startsWith(
+                              "/uploads/",
+                            )}
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-foreground/70">
+                            {initials(user.name)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs text-foreground/60 truncate max-w-[10rem]">
+                        {user.name}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-3">
