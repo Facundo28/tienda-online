@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { UserMenu } from "@/components/UserMenu";
+import { ProductsCategorySelect } from "@/components/ProductsCategorySelect";
 
 const navLinkClass =
   "rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-foreground/5";
@@ -18,9 +19,12 @@ export async function SiteHeader() {
         <nav className="flex items-center gap-1">
           {user ? (
             <>
-              <Link href="/products" className={navLinkClass}>
-                Productos
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/products" className={navLinkClass}>
+                  Productos
+                </Link>
+                <ProductsCategorySelect />
+              </div>
               <Link href="/cart" className={navLinkClass}>
                 Carrito
               </Link>

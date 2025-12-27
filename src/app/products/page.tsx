@@ -5,7 +5,6 @@ import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { requireUser } from "@/lib/auth/session";
 import { ProductCategory } from "@/generated/prisma/enums";
-import { CategorySelect } from "./CategorySelect";
 
 export const dynamic = "force-dynamic";
 
@@ -49,49 +48,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     orderBy: { createdAt: "desc" },
   })) as ProductRow[];
 
-  const categories = [
-    { value: "ALL", label: "Todas" },
-    {
-      value: ProductCategory.INDUMENTARIA,
-      label: "Indumentaria",
-    },
-    {
-      value: ProductCategory.VEHICULOS,
-      label: "Vehículos",
-    },
-    {
-      value: ProductCategory.INMUEBLES,
-      label: "Inmuebles",
-    },
-    {
-      value: ProductCategory.TECNOLOGIA,
-      label: "Tecnología",
-    },
-    {
-      value: ProductCategory.HOGAR,
-      label: "Hogar",
-    },
-    {
-      value: ProductCategory.SERVICIOS,
-      label: "Servicios",
-    },
-    {
-      value: ProductCategory.OTROS,
-      label: "Otros",
-    },
-  ] as const;
-
   return (
     <section>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
-            <CategorySelect
-              options={categories as unknown as { value: string; label: string }[]}
-              selected={selectedCategory ?? "ALL"}
-            />
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
           <p className="text-sm text-foreground/70">
             Agrega productos al carrito y finaliza tu pedido.
           </p>
