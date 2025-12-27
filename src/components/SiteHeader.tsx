@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth/session";
-import { LogoutButton } from "@/components/LogoutButton";
+import { UserMenu } from "@/components/UserMenu";
 
 const navLinkClass =
   "rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-foreground/5";
@@ -42,7 +42,13 @@ export async function SiteHeader() {
                   Usuarios
                 </Link>
               ) : null}
-              <LogoutButton />
+              <UserMenu
+                user={{
+                  name: user.name,
+                  email: user.email,
+                  avatarUrl: user.avatarUrl,
+                }}
+              />
             </>
           )}
         </nav>
