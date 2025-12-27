@@ -159,11 +159,12 @@ export function EditProductModal({ product }: { product: EditableProduct }) {
                   />
                   <input
                     className="rounded-md border bg-background px-3 py-2 text-sm"
-                    name="priceCents"
-                    placeholder="Precio (en centavos, ej: 1999 = 19.99)"
+                    name="price"
+                    placeholder="Precio (ARS)"
                     type="number"
+                    step="0.01"
                     min={1}
-                    defaultValue={product.priceCents}
+                    defaultValue={product.priceCents / 100}
                     required
                   />
 

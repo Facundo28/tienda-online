@@ -1,6 +1,6 @@
-export function formatCurrencyFromCents(cents: number, currency: string = "USD") {
+export function formatCurrencyFromCents(cents: number, currency: string = "ARS") {
   const amount = cents / 100;
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,

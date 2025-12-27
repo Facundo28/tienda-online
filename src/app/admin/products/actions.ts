@@ -51,15 +51,28 @@ function parseCategory(value: FormDataEntryValue | null): ProductCategory {
   return ProductCategory.OTROS;
 }
 
+function parsePriceCents(formData: FormData): number {
+  const priceRaw = formData.get("price");
+  if (typeof priceRaw === "string") {
+    const normalized = priceRaw.trim().replace(",", ".");
+    const pesos = Number.parseFloat(normalized);
+    if (!Number.isFinite(pesos)) return 0;
+    return Math.max(0, Math.round(pesos * 100));
+  }
+
+  // Backward-compat: older forms may still send priceCents
+  const centsRaw = formData.get("priceCents");
+  const cents = Math.floor(Number(centsRaw || 0));
+  if (!Number.isFinite(cents)) return 0;
+  return Math.max(0, cents);
+}
+
 export async function createProduct(formData: FormData) {
   const user = await requireUser();
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
   const category = parseCategory(formData.get("category"));
-  const priceCents = Math.max(
-    0,
-    Math.floor(Number(formData.get("priceCents") || 0)),
-  );
+  const priceCents = parsePriceCents(formData);
   const imageUrl = String(formData.get("imageUrl") || "").trim();
   const imageFile = formData.get("image");
 
@@ -126,10 +139,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
   const category = parseCategory(formData.get("category"));
-  const priceCents = Math.max(
-    0,
-    Math.floor(Number(formData.get("priceCents") || 0)),
-  );
+  const priceCents = parsePriceCents(formData);
 
   const imageUrl = String(formData.get("imageUrl") || "").trim();
   const imageFile = formData.get("image");
