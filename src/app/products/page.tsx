@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
-import { AddToCartButton } from "@/components/AddToCartButton";
 import { requireUser } from "@/lib/auth/session";
 import { ProductCategory } from "@/generated/prisma/enums";
 
@@ -101,8 +100,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             return (
               <li
                 key={p.id}
-                className="overflow-hidden rounded-2xl border bg-background"
+                className="relative overflow-hidden rounded-2xl border bg-background"
               >
+                <Link
+                  href={`/products/${p.id}`}
+                  className="absolute inset-0"
+                  aria-label={`Ver ${p.name}`}
+                />
                 <div className="relative aspect-[4/3] w-full bg-foreground/5">
                   {imageSrc ? (
                     <Image
@@ -129,7 +133,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   </div>
 
                   {owner ? (
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="relative z-10 flex shrink-0 items-center gap-2">
                       <span className="relative h-5 w-5 overflow-hidden rounded-full border bg-foreground/5">
                         {ownerAvatarSrc ? (
                           <Image
@@ -156,13 +160,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   ) : null}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">
-                    {formatCurrencyFromCents(p.priceCents)}
-                  </div>
-                  <AddToCartButton
-                    product={{ id: p.id, name: p.name, priceCents: p.priceCents }}
-                  />
+                <div className="mt-4 text-sm font-semibold">
+                  {formatCurrencyFromCents(p.priceCents)}
                 </div>
               </div>
               </li>

@@ -1,0 +1,135 @@
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth/session";
+import { formatCurrencyFromCents } from "@/lib/money";
+import { AddToCartButton } from "@/components/AddToCartButton";
+
+export const dynamic = "force-dynamic";
+
+function normalizeImageSrc(src: string) {
+  if (src.startsWith("http")) return src;
+  if (src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase());
+  return letters.join("") || "U";
+}
+
+type ProductDetailsPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function ProductDetailsPage({ params }: ProductDetailsPageProps) {
+  await requireUser();
+
+  const { id } = await params;
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  if (!product || !product.isActive) notFound();
+
+  const imageSrc = product.imageUrl ? normalizeImageSrc(product.imageUrl) : null;
+  const owner = product.user;
+  const ownerAvatarSrc = owner?.avatarUrl ? normalizeImageSrc(owner.avatarUrl) : null;
+
+  return (
+    <section>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+          <p className="text-sm text-foreground/70">{product.description}</p>
+        </div>
+
+        <Link
+          href="/products"
+          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
+        >
+          Volver
+        </Link>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="overflow-hidden rounded-2xl border bg-background">
+          <div className="relative aspect-[4/3] w-full bg-foreground/5">
+            {imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={product.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                unoptimized={imageSrc.startsWith("/uploads/")}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-foreground/60">
+                Sin imagen
+              </div>
+            )}
+          </div>
+
+          <div className="p-5">
+            <div className="text-sm text-foreground/70">Categoría: {product.category}</div>
+          </div>
+        </div>
+
+        <aside className="rounded-2xl border bg-background p-5">
+          {owner ? (
+            <div className="flex items-center gap-2">
+              <span className="relative h-7 w-7 overflow-hidden rounded-full border bg-foreground/5">
+                {ownerAvatarSrc ? (
+                  <Image
+                    src={ownerAvatarSrc}
+                    alt={owner.name}
+                    fill
+                    className="object-cover"
+                    sizes="28px"
+                    unoptimized={ownerAvatarSrc.startsWith("/uploads/")}
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground/70">
+                    {initials(owner.name)}
+                  </span>
+                )}
+              </span>
+
+              <Link href={`/users/${owner.id}`} className="text-sm hover:underline">
+                {owner.name}
+              </Link>
+            </div>
+          ) : null}
+
+          <div className="mt-4 text-lg font-semibold">
+            {formatCurrencyFromCents(product.priceCents)}
+          </div>
+
+          <div className="mt-4">
+            <AddToCartButton
+              product={{
+                id: product.id,
+                name: product.name,
+                priceCents: product.priceCents,
+              }}
+            />
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
