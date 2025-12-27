@@ -2,9 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
-import { deleteProduct, toggleProduct } from "./actions";
+import { deleteProduct } from "./actions";
 import { requireUser } from "@/lib/auth/session";
 import { CreateProductModal } from "./CreateProductModal";
+import { EditProductModal } from "./EditProductModal";
 
 export const dynamic = "force-dynamic";
 
@@ -116,19 +117,16 @@ export default async function AdminProductsPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <form
-                        action={async () => {
-                          "use server";
-                          await toggleProduct(p.id, !p.isActive);
+                      <EditProductModal
+                        product={{
+                          id: p.id,
+                          name: p.name,
+                          description: p.description,
+                          priceCents: p.priceCents,
+                          category: String(p.category),
+                          imageUrl: p.imageUrl,
                         }}
-                      >
-                        <button
-                          type="submit"
-                          className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-                        >
-                          {p.isActive ? "Desactivar" : "Activar"}
-                        </button>
-                      </form>
+                      />
 
                       <form
                         action={async () => {
