@@ -22,7 +22,11 @@ export default async function AccountPage() {
           Edita tus datos personales y tu foto.
         </p>
 
-        <form className="mt-6 grid gap-4" action={updateProfile}>
+        <form
+          className="mt-6 grid gap-4"
+          action={updateProfile}
+          encType="multipart/form-data"
+        >
           <div className="flex items-center gap-4">
             <div className="relative h-14 w-14 overflow-hidden rounded-full border bg-foreground/5">
               {user.avatarUrl ? (

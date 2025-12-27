@@ -34,7 +34,11 @@ export default async function AdminProductsPage() {
       <div className="mt-6 grid grid-cols-1 gap-6">
         <section className="rounded-2xl border bg-background p-6">
           <h2 className="font-semibold">Crear producto</h2>
-          <form className="mt-3 grid grid-cols-1 gap-3" action={createProduct}>
+          <form
+            className="mt-3 grid grid-cols-1 gap-3"
+            action={createProduct}
+            encType="multipart/form-data"
+          >
             <input
               className="rounded-md border bg-background px-3 py-2 text-sm"
               name="name"
