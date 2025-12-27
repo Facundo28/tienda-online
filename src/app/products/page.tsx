@@ -8,8 +8,6 @@ import { ProductCategory } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
 
-type ProductRow = Awaited<ReturnType<(typeof prisma.product.findMany)>>[number];
-
 function normalizeImageSrc(src: string) {
   if (src.startsWith("http")) return src;
   if (src.startsWith("/")) return src;
@@ -40,13 +38,22 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const resolvedSearchParams = await searchParams;
   const selectedCategory = parseCategory(resolvedSearchParams?.category);
 
-  const products = (await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: {
       isActive: true,
       ...(selectedCategory ? { category: selectedCategory } : {}),
     },
     orderBy: { createdAt: "desc" },
-  })) as ProductRow[];
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
 
   return (
     <section>
@@ -75,8 +82,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((p: ProductRow) => {
+          {products.map((p) => {
             const imageSrc = p.imageUrl ? normalizeImageSrc(p.imageUrl) : null;
+            const owner = p.user;
+            const ownerAvatarSrc = owner?.avatarUrl
+              ? normalizeImageSrc(owner.avatarUrl)
+              : null;
 
             return (
               <li
@@ -108,29 +119,30 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     {p.description}
                   </div>
 
-                  {user ? (
+                  {owner ? (
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="relative h-5 w-5 overflow-hidden rounded-full border bg-foreground/5">
-                        {user.avatarUrl ? (
+                        {ownerAvatarSrc ? (
                           <Image
-                            src={normalizeImageSrc(user.avatarUrl)}
-                            alt={user.name}
+                            src={ownerAvatarSrc}
+                            alt={owner.name}
                             fill
                             className="object-cover"
                             sizes="20px"
-                            unoptimized={normalizeImageSrc(user.avatarUrl).startsWith(
-                              "/uploads/",
-                            )}
+                            unoptimized={ownerAvatarSrc.startsWith("/uploads/")}
                           />
                         ) : (
                           <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-foreground/70">
-                            {initials(user.name)}
+                            {initials(owner.name)}
                           </span>
                         )}
                       </span>
-                      <span className="text-xs text-foreground/60 truncate max-w-[10rem]">
-                        {user.name}
-                      </span>
+                      <Link
+                        href={`/users/${owner.id}`}
+                        className="text-xs text-foreground/60 truncate max-w-[10rem] hover:underline"
+                      >
+                        {owner.name}
+                      </Link>
                     </div>
                   ) : null}
                 </div>
