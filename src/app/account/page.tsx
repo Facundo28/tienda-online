@@ -25,7 +25,6 @@ export default async function AccountPage() {
         <form
           className="mt-6 grid gap-4"
           action={updateProfile}
-          encType="multipart/form-data"
         >
           <div className="flex items-center gap-4">
             <div className="relative h-14 w-14 overflow-hidden rounded-full border bg-foreground/5">

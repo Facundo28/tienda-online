@@ -137,7 +137,6 @@ export function EditProductModal({ product }: { product: EditableProduct }) {
             <form
               className="mt-4"
               action={updateProduct.bind(null, product.id)}
-              encType="multipart/form-data"
               onSubmit={() => {
                 close();
               }}

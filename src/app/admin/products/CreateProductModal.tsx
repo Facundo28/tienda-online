@@ -123,7 +123,6 @@ export function CreateProductModal() {
             <form
               className="mt-4"
               action={createProduct}
-              encType="multipart/form-data"
               onSubmit={() => {
                 close();
               }}
