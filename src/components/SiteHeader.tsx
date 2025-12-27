@@ -16,6 +16,18 @@ export async function SiteHeader() {
           Tienda online
         </Link>
 
+        <form action="/products" method="get" className="hidden w-full max-w-xl md:block">
+          <label className="sr-only" htmlFor="navbar-search">
+            Buscar
+          </label>
+          <input
+            id="navbar-search"
+            name="q"
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Buscar productos..."
+          />
+        </form>
+
         <nav className="flex items-center gap-1">
           {user ? (
             <>
@@ -56,6 +68,22 @@ export async function SiteHeader() {
             </>
           )}
         </nav>
+      </div>
+
+      <div className="border-t md:hidden">
+        <div className="mx-auto max-w-6xl px-6 py-3">
+          <form action="/products" method="get">
+            <label className="sr-only" htmlFor="navbar-search-mobile">
+              Buscar
+            </label>
+            <input
+              id="navbar-search-mobile"
+              name="q"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Buscar productos..."
+            />
+          </form>
+        </div>
       </div>
     </header>
   );

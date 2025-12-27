@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
-import { TopSearchBar } from "@/components/TopSearchBar";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,7 +31,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
       >
-        <TopSearchBar />
         <SiteHeader />
         <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
       </body>
