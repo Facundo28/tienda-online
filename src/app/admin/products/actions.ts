@@ -52,7 +52,7 @@ function parseCategory(value: FormDataEntryValue | null): ProductCategory {
 }
 
 export async function createProduct(formData: FormData) {
-  await requireUser();
+  const user = await requireUser();
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
   const category = parseCategory(formData.get("category"));
@@ -77,6 +77,7 @@ export async function createProduct(formData: FormData) {
       name,
       description,
       category,
+      userId: user.id,
       priceCents,
       imageUrl: finalImageUrl,
       isActive: true,
@@ -88,7 +89,18 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function toggleProduct(productId: string, isActive: boolean) {
-  await requireUser();
+  const user = await requireUser();
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { userId: true },
+  });
+
+  if (!product) throw new Error("Producto no encontrado");
+  if (user.role !== "ADMIN" && product.userId !== user.id) {
+    throw new Error("No autorizado");
+  }
+
   await prisma.product.update({
     where: { id: productId },
     data: { isActive },
@@ -99,7 +111,18 @@ export async function toggleProduct(productId: string, isActive: boolean) {
 }
 
 export async function deleteProduct(productId: string) {
-  await requireUser();
+  const user = await requireUser();
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { userId: true },
+  });
+
+  if (!product) throw new Error("Producto no encontrado");
+  if (user.role !== "ADMIN" && product.userId !== user.id) {
+    throw new Error("No autorizado");
+  }
+
   await prisma.product.delete({
     where: { id: productId },
   });

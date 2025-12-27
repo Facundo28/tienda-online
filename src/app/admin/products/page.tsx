@@ -36,8 +36,9 @@ function formatCategory(value: string) {
 }
 
 export default async function AdminProductsPage() {
-  await requireUser();
+  const user = await requireUser();
   const products = (await prisma.product.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   })) as ProductRow[];
 
