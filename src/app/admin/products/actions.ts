@@ -7,7 +7,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
-import { ProductCategory } from "@/generated/prisma/client";
+import { ProductCategory } from "@/generated/prisma/enums";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([

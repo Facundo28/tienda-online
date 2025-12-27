@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { requireUser } from "@/lib/auth/session";
-import { ProductCategory } from "@/generated/prisma/client";
+import { ProductCategory } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
 
