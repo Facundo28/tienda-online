@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { BuyNowButton } from "@/components/BuyNowButton";
 import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { answerProductQuestion, createProductQuestion } from "./actions";
 
@@ -147,6 +148,16 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
                 priceCents: product.priceCents,
               }}
             />
+
+            <div className="mt-2">
+              <BuyNowButton
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  priceCents: product.priceCents,
+                }}
+              />
+            </div>
           </div>
         </aside>
       </div>
