@@ -21,7 +21,7 @@ function initials(name: string) {
 }
 
 type ProductsPageProps = {
-  searchParams?: Promise<{ category?: string }>;
+  searchParams?: Promise<{ category?: string; q?: string }>;
 };
 
 function parseCategory(value: string | undefined): ProductCategory | null {
@@ -37,11 +37,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   const resolvedSearchParams = await searchParams;
   const selectedCategory = parseCategory(resolvedSearchParams?.category);
+  const query = String(resolvedSearchParams?.q ?? "").trim();
 
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
       ...(selectedCategory ? { category: selectedCategory } : {}),
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query } },
+              { description: { contains: query } },
+            ],
+          }
+        : {}),
     },
     orderBy: { createdAt: "desc" },
     include: {

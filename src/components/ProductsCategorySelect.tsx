@@ -29,11 +29,12 @@ export function ProductsCategorySelect() {
       value={selected}
       onChange={(e) => {
         const next = e.currentTarget.value;
-        if (next === "ALL") {
-          router.push("/products");
-        } else {
-          router.push(`/products?category=${encodeURIComponent(next)}`);
-        }
+        const nextParams = new URLSearchParams(searchParams.toString());
+        if (next === "ALL") nextParams.delete("category");
+        else nextParams.set("category", next);
+
+        const qs = nextParams.toString();
+        router.push(qs ? `/products?${qs}` : "/products");
       }}
       aria-label="Categorías"
     >
