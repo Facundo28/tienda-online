@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { createProductQuestion } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
 
   const { id } = await params;
 
-  const product = await prisma.product.findUnique({
+  const product = (await prisma.product.findUnique({
     where: { id },
     include: {
       user: {
@@ -40,14 +41,35 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
           avatarUrl: true,
         },
       },
+      questions: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
     },
-  });
+  } as any)) as any;
 
   if (!product || !product.isActive) notFound();
 
   const imageSrc = product.imageUrl ? normalizeImageSrc(product.imageUrl) : null;
-  const owner = product.user;
+  const owner = product.user as
+    | { id: string; name: string; avatarUrl: string | null }
+    | null
+    | undefined;
   const ownerAvatarSrc = owner?.avatarUrl ? normalizeImageSrc(owner.avatarUrl) : null;
+  const questions = (product.questions ?? []) as Array<{
+    id: string;
+    text: string;
+    createdAt: Date;
+    user: { id: string; name: string; avatarUrl: string | null };
+  }>;
 
   return (
     <section>
@@ -129,6 +151,89 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
             />
           </div>
         </aside>
+      </div>
+
+      <div className="mt-8 rounded-2xl border bg-background p-6" id="preguntas">
+        <h2 className="text-lg font-semibold">Preguntas</h2>
+        <p className="mt-1 text-sm text-foreground/70">
+          Hacé una pregunta sobre este producto.
+        </p>
+
+        <form
+          className="mt-4 grid gap-3"
+          action={createProductQuestion.bind(null, product.id)}
+        >
+          <textarea
+            name="text"
+            className="min-h-[90px] rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Escribí tu pregunta..."
+            required
+          />
+          <div>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
+            >
+              Preguntar
+            </button>
+          </div>
+        </form>
+
+        {questions.length === 0 ? (
+          <div className="mt-6 text-sm text-foreground/70">
+            Todavía no hay preguntas.
+          </div>
+        ) : (
+          <ul className="mt-6 grid gap-3">
+            {questions.map((q) => {
+              const qUser = q.user;
+              const qUserAvatarSrc = qUser.avatarUrl
+                ? normalizeImageSrc(qUser.avatarUrl)
+                : null;
+              const createdLabel = new Intl.DateTimeFormat("es-AR", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }).format(q.createdAt);
+
+              return (
+                <li key={q.id} className="rounded-xl border bg-background p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="relative h-7 w-7 overflow-hidden rounded-full border bg-foreground/5">
+                        {qUserAvatarSrc ? (
+                          <Image
+                            src={qUserAvatarSrc}
+                            alt={qUser.name}
+                            fill
+                            className="object-cover"
+                            sizes="28px"
+                            unoptimized={qUserAvatarSrc.startsWith("/uploads/")}
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground/70">
+                            {initials(qUser.name)}
+                          </span>
+                        )}
+                      </span>
+                      <Link
+                        href={`/users/${qUser.id}`}
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {qUser.name}
+                      </Link>
+                    </div>
+
+                    <div className="text-xs text-foreground/60">{createdLabel}</div>
+                  </div>
+
+                  <div className="mt-3 text-sm text-foreground/80 whitespace-pre-wrap">
+                    {q.text}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );
