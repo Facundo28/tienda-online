@@ -198,9 +198,22 @@ export async function deleteProduct(productId: string) {
     throw new Error("No autorizado");
   }
 
-  await prisma.product.delete({
-    where: { id: productId },
-  });
+  try {
+    await prisma.product.delete({
+      where: { id: productId },
+    });
+  } catch (error: any) {
+    if (error.code === 'P2003') {
+      // Foreign key constraint failed (e.g. invalidates OrderItem)
+      // Soft-delete instead
+      await prisma.product.update({
+        where: { id: productId },
+        data: { isActive: false },
+      });
+    } else {
+      throw error;
+    }
+  }
 
   revalidatePath("/admin/products");
   revalidatePath("/products");

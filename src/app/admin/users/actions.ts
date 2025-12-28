@@ -1,71 +1,90 @@
 "use server";
 
+import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/auth/password";
 import { revalidatePath } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
-import { requireAdmin, getCurrentUser } from "@/lib/auth/session";
+// --- Middleware Check ---
+async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") {
+    throw new Error("Acceso denegado: Se requieren permisos de Administrador.");
+  }
+  return user;
+}
 
-export async function setUserActive(userId: string, isActive: boolean) {
+// 1. Update Basic Info
+export async function adminUpdateUser(formData: FormData) {
   await requireAdmin();
 
-  const current = await getCurrentUser();
-  if (current?.id === userId) {
-    throw new Error("No puedes desactivar tu propio usuario");
-  }
+  const userId = formData.get("userId") as string;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const phone = formData.get("phone") as string;
+  const role = formData.get("role") as "USER" | "ADMIN";
+
+  if (!userId || !email) throw new Error("Datos incompletos");
 
   await prisma.user.update({
     where: { id: userId },
-    data: { isActive },
+    data: {
+      name,
+      email,
+      phone,
+      role,
+    },
   });
 
+  revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/users");
 }
 
-export async function setUserRole(userId: string, role: "USER" | "ADMIN") {
+// 2. Toggle Verified Badge
+export async function adminToggleVerified(userId: string, isVerified: boolean) {
   await requireAdmin();
-
-  const current = await getCurrentUser();
-  if (current?.id === userId && role !== "ADMIN") {
-    throw new Error("No puedes quitarte el rol ADMIN a ti mismo");
-  }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { role },
+    data: { isVerified },
   });
 
-  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
 }
 
-export async function deleteUser(userId: string) {
+// 3. Reset Password (God Mode)
+export async function adminResetPassword(formData: FormData) {
   await requireAdmin();
 
-  const current = await getCurrentUser();
-  if (current?.id === userId) {
-    throw new Error("No puedes eliminar tu propio usuario");
+  const userId = formData.get("userId") as string;
+  const newPassword = formData.get("newPassword") as string;
+
+  if (!userId || !newPassword || newPassword.length < 6) {
+    throw new Error("Contraseña inválida (min 6 caracteres).");
   }
 
-  const user = await prisma.user.findUnique({
+  const hashedPassword = await hashPassword(newPassword);
+
+  await prisma.user.update({
     where: { id: userId },
-    select: { id: true, role: true },
+    data: { passwordHash: hashedPassword },
+  });
+  
+  // Optional: Invalidate sessions here if we had a session table management
+  revalidatePath(`/admin/users/${userId}`);
+}
+
+// 4. Disable 2FA (Recovery)
+export async function adminDisable2FA(userId: string) {
+  await requireAdmin();
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      twoFactorSecret: null,
+      enabled2FAMethods: "", // Clear all methods
+    },
   });
 
-  if (!user) {
-    revalidatePath("/admin/users");
-    return;
-  }
-
-  if (user.role === "ADMIN") {
-    const adminsCount = await prisma.user.count({
-      where: { role: "ADMIN", isActive: true },
-    });
-
-    if (adminsCount <= 1) {
-      throw new Error("No puedes eliminar el último ADMIN activo");
-    }
-  }
-
-  await prisma.user.delete({ where: { id: userId } });
-
-  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
 }

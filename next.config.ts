@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "i.imgur.com",
+      },
+    ],
+  },
 };
 
+// Force server restart
 export default nextConfig;

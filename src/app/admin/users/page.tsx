@@ -1,118 +1,120 @@
-import Link from "next/link";
-
+import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/session";
-import { deleteUser, setUserActive, setUserRole } from "./actions";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
-export const dynamic = "force-dynamic";
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") redirect("/");
 
-type UserRow = Awaited<ReturnType<(typeof prisma.user.findMany)>>[number];
+  // Next.js 15: searchParams is a promise
+  const params = await searchParams;
+  const query = params.q || "";
 
-export default async function AdminUsersPage() {
-  await requireAdmin();
-
-  const users = (await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { name: { contains: query} }, // Case insensitive in SQLite usually requires adding mode: 'insensitive' but default prisma sqlite matches case-blind often or we accept it
+        { email: { contains: query } },
+      ],
     },
-  })) as UserRow[];
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
 
   return (
-    <section>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Admin: Usuarios
-          </h1>
-          <p className="text-sm text-foreground/70">
-            Moderación de cuentas (activar/desactivar y rol).
-          </p>
+           <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
+           <p className="text-gray-500">Administra permisos, verificación y seguridad.</p>
         </div>
-        <Link
-          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-          href="/admin/products"
-        >
-          Admin productos
-        </Link>
       </div>
 
-      <div className="mt-6 rounded-2xl border bg-background p-6">
-        {users.length === 0 ? (
-          <p className="text-sm text-foreground/70">No hay usuarios.</p>
-        ) : (
-          <ul className="space-y-3">
+      {/* Search Bar */}
+      <form className="flex gap-2">
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Buscar por nombre o email..."
+          className="flex-1 rounded-lg border border-gray-300 px-4 py-2"
+        />
+        <button className="bg-black text-white px-6 py-2 rounded-lg font-medium">Buscar</button>
+      </form>
+
+      {/* Users Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="px-6 py-3 font-semibold text-gray-900">Usuario</th>
+              <th className="px-6 py-3 font-semibold text-gray-900">Rol</th>
+              <th className="px-6 py-3 font-semibold text-gray-900">Estado</th>
+              <th className="px-6 py-3 font-semibold text-gray-900 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
             {users.map((u) => (
-              <li
-                key={u.id}
-                className="rounded-2xl border p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="font-semibold truncate">{u.name}</div>
-                  <div className="text-sm text-foreground/70 truncate">
-                    {u.email}
+              <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold overflow-hidden">
+                       {u.avatarUrl ? (
+                         <img src={u.avatarUrl.startsWith("http") ? u.avatarUrl : `/${u.avatarUrl}`} className="w-full h-full object-cover" />
+                       ) : u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 flex items-center gap-1">
+                        {u.name}
+                        {u.isVerified && <VerifiedBadge />}
+                      </div>
+                      <div className="text-gray-500 text-xs">{u.email}</div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-sm text-foreground/70">
-                    Rol: <span className="font-medium">{u.role}</span> · Estado:{" "}
-                    <span className="font-medium">
-                      {u.isActive ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await setUserActive(u.id, !u.isActive);
-                    }}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {u.role}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                   <div className="flex flex-col gap-1">
+                      {u.isVerified ? (
+                        <span className="text-xs text-[#12753e] font-medium flex items-center gap-1">
+                          ✓ Verificado
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">No verificado</span>
+                      )}
+                      
+                      {u.enabled2FAMethods && u.enabled2FAMethods.length > 0 && (
+                          <span className="text-xs text-blue-600 font-medium">🛡️ 2FA Activo</span>
+                      )}
+                   </div>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <Link
+                    href={`/admin/users/${u.id}`}
+                    className="text-indigo-600 hover:text-indigo-900 font-medium text-sm"
                   >
-                    <button
-                      type="submit"
-                      className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-                    >
-                      {u.isActive ? "Desactivar" : "Activar"}
-                    </button>
-                  </form>
-
-                  <form
-                    action={async () => {
-                      "use server";
-                      await setUserRole(u.id, u.role === "ADMIN" ? "USER" : "ADMIN");
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-                    >
-                      {u.role === "ADMIN" ? "Hacer USER" : "Hacer ADMIN"}
-                    </button>
-                  </form>
-
-                  <form
-                    action={async () => {
-                      "use server";
-                      await deleteUser(u.id);
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-                    >
-                      Eliminar
-                    </button>
-                  </form>
-                </div>
-              </li>
+                    Administrar
+                  </Link>
+                </td>
+              </tr>
             ))}
-          </ul>
+          </tbody>
+        </table>
+        {users.length === 0 && (
+            <div className="p-12 text-center text-gray-500">No se encontraron usuarios.</div>
         )}
       </div>
-    </section>
+    </div>
   );
 }

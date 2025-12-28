@@ -158,7 +158,6 @@ export function CreateProductModal() {
                     min={1}
                     required
                   />
-
                   <div className="grid gap-1">
                     <label
                       className="text-sm font-medium text-foreground/80"
@@ -254,17 +253,17 @@ export function CreateProductModal() {
                 </div>
 
                 <div className="rounded-2xl border bg-foreground/5 p-3">
-                  <div className="text-xs font-medium text-foreground/70">Preview</div>
+                  <div className="text-xs font-medium text-foreground/70">Vista previa</div>
                   <div className="mt-2 h-[420px] w-full overflow-hidden rounded-xl border bg-background">
                     {filePreviewUrl || imageUrl.trim() ? (
                       <img
                         src={normalizeImageSrc(filePreviewUrl ?? imageUrl)}
-                        alt="Preview"
+                        alt="Vista previa"
                         className="h-full w-full object-contain"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-sm text-foreground/60">
-                        Sin imagen
+                        Vista previa de tu publicación
                       </div>
                     )}
                   </div>

@@ -6,6 +6,7 @@ import { deleteProduct } from "./actions";
 import { requireUser } from "@/lib/auth/session";
 import { CreateProductModal } from "./CreateProductModal";
 import { EditProductModal } from "./EditProductModal";
+import { BoostProductButton } from "./BoostProductButton";
 
 export const dynamic = "force-dynamic";
 
@@ -49,14 +50,14 @@ export default async function AdminProductsPage() {
   const user = await requireUser();
   const products = (await prisma.product.findMany({
     where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
   })) as ProductRow[];
 
   return (
     <section>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mis publicaciones</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Publicaciones</h1>
           <p className="text-sm text-foreground/70">
             Crea y administra tus productos.
           </p>
@@ -79,14 +80,21 @@ export default async function AdminProductsPage() {
             <p className="mt-3 text-sm text-foreground/70">No hay productos aún.</p>
           ) : (
             <ul className="mt-3 space-y-3">
-              {products.map((p: ProductRow) => (
+              {products.map((p: ProductRow) => {
+                 const isBoosted = !!(p.boostedUntil && new Date(p.boostedUntil) > new Date());
+                 return (
                 <li
                   key={p.id}
-                  className="rounded-2xl border p-4 sm:p-5"
+                  className={`rounded-2xl border p-4 sm:p-5 ${isBoosted ? 'bg-emerald-50/50 border-emerald-200' : ''}`}
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-4">
                       <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border bg-foreground/5">
+                        {isBoosted && (
+                            <div className="absolute top-0 left-0 right-0 bg-[#12753e] text-[8px] font-bold text-center text-white py-0.5 z-10 tracking-wider">
+                                RECOMENDADO
+                            </div>
+                        )}
                         {firstImageUrl(p.imageUrl) ? (
                           <Image
                             src={firstImageUrl(p.imageUrl) ?? ""}
@@ -134,6 +142,10 @@ export default async function AdminProductsPage() {
                           imageUrl: p.imageUrl,
                         }}
                       />
+                      <BoostProductButton
+                        productId={p.id}
+                        isBoosted={!!(p.boostedUntil && new Date(p.boostedUntil) > new Date())}
+                      />
 
                       <form
                         action={async () => {
@@ -151,7 +163,8 @@ export default async function AdminProductsPage() {
                     </div>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </section>

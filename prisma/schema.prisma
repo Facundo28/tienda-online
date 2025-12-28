@@ -19,6 +19,7 @@ model Product {
   priceCents  Int
   imageUrl    String?
   isActive    Boolean  @default(true)
+  boostedUntil DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -26,8 +27,26 @@ model Product {
 
   orderItems OrderItem[]
   questions  ProductQuestion[]
+  favorites  Favorite[]
+  reviews    Review[]
 
   @@index([isActive])
+  @@index([userId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  productId String
+  userId    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
   @@index([userId])
 }
 
@@ -59,10 +78,21 @@ model Order {
   state         String
   postalCode    String
   status        OrderStatus @default(PENDING)
+  deliveryMethod DeliveryMethod @default(PICKUP)
+  deliveryStatus DeliveryStatus @default(PENDING)
+  pickupCode     String?
+  fundsReleased  Boolean        @default(false)
+  scanLatitude   Float?
+  scanLongitude  Float?
   totalCents    Int
   createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   items OrderItem[]
+  claim Claim?
 }
 
 model OrderItem {
@@ -93,13 +123,39 @@ model User {
   postalCode   String?
   passwordHash String
   role         UserRole @default(USER)
+  
+  // KYC / Identity
+  isVerified      Boolean @default(false)
+  identityDocUrl  String? 
+  
+  // Reputation
+  reputationScore Int            @default(50) // Start neutral
+  reputationTier  ReputationTier @default(NARANJA)
+
+  // Address Extras
+  addressInstructions String?
+  addressType         String? // "RESIDENCIAL" | "LABORAL"
+
   isActive     Boolean  @default(true)
+  
+  // Security
+  twoFactorSecret String? // For TOTP (App)
+  enabled2FAMethods String @default("") // "APP,EMAIL,SMS"
+  
+  phoneCountryCode String?
+  otpCode      String?
+  otpExpiresAt DateTime?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   sessions Session[]
   products Product[]
   questions ProductQuestion[]
+  orders    Order[]
+  favorites Favorite[]
+  reviews   Review[]
+  claims    Claim[]
 
   @@index([role])
   @@index([isActive])
@@ -123,11 +179,20 @@ enum OrderStatus {
   PAID
   CANCELLED
   FULFILLED
+  DISPUTED
 }
 
 enum UserRole {
   USER
   ADMIN
+}
+
+enum ReputationTier {
+  ROJO      // < 20
+  NARANJA   // 20-50
+  AMARILLO  // 50-80
+  VERDE     // 80-95
+  PLATINUM  // > 95
 }
 
 enum ProductCategory {
@@ -138,4 +203,57 @@ enum ProductCategory {
   HOGAR
   SERVICIOS
   OTROS
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
+enum DeliveryStatus {
+  PENDING
+  READY_TO_PICKUP
+  ASSIGNED
+  ON_WAY
+  DELIVERED
+}
+
+model Claim {
+  id          String      @id @default(cuid())
+  orderId     String      @unique
+  userId      String
+  type        ClaimType   @default(NOT_RECEIVED)
+  status      ClaimStatus @default(OPEN)
+  description String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ClaimStatus {
+  OPEN
+  RESOLVED_REFUNDED
+  RESOLVED_RELEASED
+}
+
+enum ClaimType {
+  NOT_RECEIVED
+  DAMAGED
+  OTHER
 }

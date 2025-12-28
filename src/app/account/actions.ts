@@ -51,6 +51,7 @@ export async function updateProfile(formData: FormData) {
   const avatarFile = formData.get("avatar");
 
   const phone = String(formData.get("customerPhone") || "").trim();
+  const phoneCountryCode = String(formData.get("phoneCountryCode") || "").trim();
   const addressLine1 = String(formData.get("addressLine1") || "").trim();
   const addressLine2 = String(formData.get("addressLine2") || "").trim();
   const city = String(formData.get("city") || "").trim();
@@ -80,6 +81,7 @@ export async function updateProfile(formData: FormData) {
       name,
       email,
       phone: phone || null,
+      phoneCountryCode: phoneCountryCode || null,
       addressLine1: addressLine1 || null,
       addressLine2: addressLine2 || null,
       city: city || null,
