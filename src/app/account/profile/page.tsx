@@ -121,8 +121,8 @@ export default async function ProfilePage() {
                       placeholder="11 1234 5678"
                       className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-[#12753e] focus:border-[#12753e]"
                     />
-                </div>
-              </div>
+                  </div>
+               </div>
           </div>
 
           <div className="flex justify-end pt-4 border-t border-gray-100">
