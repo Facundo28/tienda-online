@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,8 +33,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
       >
-        <SiteHeader />
-        <main className="mx-auto w-full max-w-6xl px-6 py-8">{children}</main>
+        {children}
+        <SiteFooter />
         <Toaster richColors position="top-center" />
       </body>
 

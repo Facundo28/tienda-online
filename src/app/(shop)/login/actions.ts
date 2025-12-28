@@ -31,5 +31,16 @@ export async function login(_prevState: LoginState, formData: FormData) {
   }
 
   await createSession(user.id);
-  redirect("/");
+
+  // Role-based Redirection
+  switch (user.role) {
+    case "DRIVER":
+      redirect("/delivery");
+    case "LOGISTICS_ADMIN":
+      redirect("/logistics");
+    case "ADMIN":
+      redirect("/admin");
+    default:
+      redirect("/");
+  }
 }

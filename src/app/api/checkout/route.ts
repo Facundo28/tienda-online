@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import crypto from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
 import { DeliveryMethod, DeliveryStatus } from "@/generated/prisma/enums";
+import { generarPalabrasClave } from "@/lib/security/words";
 
 type CheckoutItem = {
   productId: string;
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
       deliveryMethod: DeliveryMethod.PICKUP,
       deliveryStatus: DeliveryStatus.PENDING,
       pickupCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
+      securityKeywords: generarPalabrasClave(),
       items: {
         create: normalizedItems.map((item) => ({
           productId: item.productId,

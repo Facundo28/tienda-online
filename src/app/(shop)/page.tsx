@@ -21,8 +21,12 @@ function firstImageUrl(raw: string | null) {
   return first ? normalizeImageSrc(first) : null;
 }
 
+import { redirect } from "next/navigation";
+
 export default async function Home() {
   const user = await getCurrentUser();
+
+
 
   const products = await prisma.product.findMany({
     where: { isActive: true },
@@ -66,7 +70,7 @@ export default async function Home() {
           </div>
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((p) => {
+            {products.map((p: any) => {
               const imageSrc = firstImageUrl(p.imageUrl);
               const href = user ? `/products/${p.id}` : "/login";
 

@@ -10,18 +10,23 @@ import {
   AlertTriangle, 
   Settings,
   Menu,
-  X
+  X,
+  Truck,
+  Building2
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils"; // Assuming utility exists, if not I'll create it or use standard className
 
 const menuItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  // { href: "/logistics", label: "Logística", icon: Truck }, // Removed as per request (Admins manage Companies, not Operations)
+  { href: "/admin/companies", label: "Empresas", icon: Building2 }, // New Companies Link
   { href: "/admin/users", label: "Usuarios", icon: Users },
   { href: "/admin/products", label: "Productos", icon: Package },
   { href: "/admin/orders", label: "Ventas", icon: ShoppingBag },
   { href: "/admin/claims", label: "Reclamos", icon: AlertTriangle },
   // { href: "/admin/settings", label: "Configuración", icon: Settings },
+  { href: "/", label: "Ir a la Tienda", icon: ShoppingBag }, // External/Home link
 ];
 
 export function AdminSidebar() {

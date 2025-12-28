@@ -67,7 +67,13 @@ export function AddressSelector({ user, updateAction }: AddressSelectorProps) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-xl font-semibold text-gray-900">Elegí dónde recibir tus compras</h1>
+        <div className="flex items-center justify-between">
+           <h1 className="text-xl font-semibold text-gray-900">Elegí dónde recibir tus compras</h1>
+           <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Volver
+            </Link>
+        </div>
         
         {/* Current Address Card */}
         {hasAddress && (

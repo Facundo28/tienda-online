@@ -1,8 +1,6 @@
 "use server";
 
-import crypto from "node:crypto";
-import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -10,36 +8,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+import { saveUploadedFile } from "@/lib/storage";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-async function saveUploadedAvatar(file: File) {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Formato de imagen no permitido (usa JPG/PNG/WebP)");
-  }
-  if (file.size > MAX_AVATAR_BYTES) {
-    throw new Error("La imagen es demasiado grande (máx 5MB)");
-  }
-
-  const ext =
-    file.type === "image/png"
-      ? "png"
-      : file.type === "image/webp"
-        ? "webp"
-        : "jpg";
-
-  const filename = `${crypto.randomBytes(16).toString("hex")}.${ext}`;
-  const avatarsDir = path.join(process.cwd(), "public", "uploads", "avatars");
-  await mkdir(avatarsDir, { recursive: true });
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(avatarsDir, filename), buffer);
-
-  return `/uploads/avatars/${filename}`;
 }
 
 export async function updateProfile(formData: FormData) {
@@ -49,9 +21,16 @@ export async function updateProfile(formData: FormData) {
   const emailRaw = String(formData.get("email") || "");
   const email = normalizeEmail(emailRaw);
   const avatarFile = formData.get("avatar");
+  
+  // KYC Fields
+  const dni = String(formData.get("dni") || "").trim();
+  const documentFrontFile = formData.get("documentFront");
+  const documentBackFile = formData.get("documentBack");
+  const identitySelfieFile = formData.get("identitySelfie");
 
   const phone = String(formData.get("customerPhone") || "").trim();
   const phoneCountryCode = String(formData.get("phoneCountryCode") || "").trim();
+  // Address fields...
   const addressLine1 = String(formData.get("addressLine1") || "").trim();
   const addressLine2 = String(formData.get("addressLine2") || "").trim();
   const city = String(formData.get("city") || "").trim();
@@ -63,9 +42,25 @@ export async function updateProfile(formData: FormData) {
     throw new Error("Email inválido");
   }
 
+  // Handle File Uploads
   let avatarUrl: string | undefined;
   if (avatarFile instanceof File && avatarFile.size > 0) {
-    avatarUrl = await saveUploadedAvatar(avatarFile);
+    avatarUrl = await saveUploadedFile(avatarFile, "avatars");
+  }
+  
+  let documentFrontUrl: string | undefined;
+  if (documentFrontFile instanceof File && documentFrontFile.size > 0) {
+    documentFrontUrl = await saveUploadedFile(documentFrontFile, "identity");
+  }
+
+  let documentBackUrl: string | undefined;
+  if (documentBackFile instanceof File && documentBackFile.size > 0) {
+    documentBackUrl = await saveUploadedFile(documentBackFile, "identity");
+  }
+  
+  let identitySelfieUrl: string | undefined;
+  if (identitySelfieFile instanceof File && identitySelfieFile.size > 0) {
+    identitySelfieUrl = await saveUploadedFile(identitySelfieFile, "identity");
   }
 
   if (email !== user.email) {
@@ -87,7 +82,11 @@ export async function updateProfile(formData: FormData) {
       city: city || null,
       state: state || null,
       postalCode: postalCode || null,
+      dni: dni || null,
       ...(avatarUrl ? { avatarUrl } : {}),
+      ...(documentFrontUrl ? { documentFrontUrl } : {}),
+      ...(documentBackUrl ? { documentBackUrl } : {}),
+      ...(identitySelfieUrl ? { identitySelfieUrl } : {}),
     },
   });
 

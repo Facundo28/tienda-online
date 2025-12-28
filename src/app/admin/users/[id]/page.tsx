@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { adminToggleVerified, adminUpdateUser, adminResetPassword, adminDisable2FA } from "../actions";
+import { AlertTriangle } from "lucide-react";
 
 export default async function AdminUserDetailPage({
   params,
@@ -63,6 +64,10 @@ export default async function AdminUserDetailPage({
                   <input type="hidden" name="userId" value={user.id} />
                   
                   <div>
+                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-xs flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Verificar que el nombre coincida con el DNI</span>
+                      </div>
                       <label className="text-sm font-medium text-gray-700">Nombre</label>
                       <input name="name" defaultValue={user.name} className="w-full border rounded-lg px-3 py-2 text-sm" />
                   </div>
@@ -71,19 +76,80 @@ export default async function AdminUserDetailPage({
                       <input name="email" defaultValue={user.email} className="w-full border rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                      <label className="text-sm font-medium text-gray-700">Teléfono</label>
                       <input name="phone" defaultValue={user.phone || ""} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                      <label className="text-sm font-medium text-gray-700">DNI / Identificación</label>
+                      <input name="dni" defaultValue={user.dni || ""} placeholder="Número de Documento" className="w-full border rounded-lg px-3 py-2 text-sm font-mono" />
                   </div>
                    <div>
                       <label className="text-sm font-medium text-gray-700">Rol</label>
                       <select name="role" defaultValue={user.role} className="w-full border rounded-lg px-3 py-2 text-sm bg-white">
                           <option value="USER">Usuario</option>
                           <option value="ADMIN">Administrador</option>
+                          <option value="LOGISTICS_ADMIN">Dueño de Logística</option>
+                          <option value="DRIVER">Repartidor</option>
                       </select>
                   </div>
                   
-                  <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold w-full hover:bg-gray-800">
-                      Guardar Cambios
+                  <div className="pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-900 mb-4">Documentación de Identidad (KYC)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Front */}
+                          <div className="space-y-2">
+                              <label className="text-xs font-semibold text-gray-600 block">Frente DNI</label>
+                               <div className="border border-dashed border-gray-300 rounded-lg p-2 text-center bg-gray-50 h-32 flex flex-col items-center justify-center relative overflow-hidden group">
+                                  {user.documentFrontUrl ? (
+                                      <img src={user.documentFrontUrl} className="w-full h-full object-cover rounded opacity-80 group-hover:opacity-40 transition-opacity" />
+                                  ) : (
+                                      <span className="text-xs text-gray-400">Sin archivo</span>
+                                  )}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <p className="text-xs font-bold text-gray-600 bg-white/80 px-2 py-1 rounded shadow-sm">Cambiar</p>
+                                  </div>
+                                  <input type="file" name="documentFront" className="absolute inset-0 opacity-0 cursor-pointer" />
+                              </div>
+                              {user.documentFrontUrl && <a href={user.documentFrontUrl} target="_blank" className="text-[10px] text-blue-600 hover:underline block text-center">Ver original</a>}
+                          </div>
+
+                          {/* Back */}
+                           <div className="space-y-2">
+                              <label className="text-xs font-semibold text-gray-600 block">Dorso DNI</label>
+                               <div className="border border-dashed border-gray-300 rounded-lg p-2 text-center bg-gray-50 h-32 flex flex-col items-center justify-center relative overflow-hidden group">
+                                  {user.documentBackUrl ? (
+                                      <img src={user.documentBackUrl} className="w-full h-full object-cover rounded opacity-80 group-hover:opacity-40 transition-opacity" />
+                                  ) : (
+                                      <span className="text-xs text-gray-400">Sin archivo</span>
+                                  )}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <p className="text-xs font-bold text-gray-600 bg-white/80 px-2 py-1 rounded shadow-sm">Cambiar</p>
+                                  </div>
+                                  <input type="file" name="documentBack" className="absolute inset-0 opacity-0 cursor-pointer" />
+                              </div>
+                               {user.documentBackUrl && <a href={user.documentBackUrl} target="_blank" className="text-[10px] text-blue-600 hover:underline block text-center">Ver original</a>}
+                          </div>
+
+                          {/* Selfie */}
+                           <div className="space-y-2">
+                              <label className="text-xs font-semibold text-gray-600 block">Selfie</label>
+                               <div className="border border-dashed border-gray-300 rounded-lg p-2 text-center bg-gray-50 h-32 flex flex-col items-center justify-center relative overflow-hidden group">
+                                  {user.identitySelfieUrl ? (
+                                      <img src={user.identitySelfieUrl} className="w-full h-full object-cover rounded opacity-80 group-hover:opacity-40 transition-opacity" />
+                                  ) : (
+                                      <span className="text-xs text-gray-400">Sin archivo</span>
+                                  )}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <p className="text-xs font-bold text-gray-600 bg-white/80 px-2 py-1 rounded shadow-sm">Cambiar</p>
+                                  </div>
+                                  <input type="file" name="identitySelfie" className="absolute inset-0 opacity-0 cursor-pointer" />
+                              </div>
+                               {user.identitySelfieUrl && <a href={user.identitySelfieUrl} target="_blank" className="text-[10px] text-blue-600 hover:underline block text-center">Ver original</a>}
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold w-full hover:bg-gray-800 mt-6">
+                      Guardar Cambios y Documentos
                   </button>
               </form>
           </div>

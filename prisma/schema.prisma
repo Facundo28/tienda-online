@@ -82,6 +82,7 @@ model Order {
   deliveryStatus DeliveryStatus @default(PENDING)
   pickupCode     String?
   fundsReleased  Boolean        @default(false)
+  fundsReleaseAt DateTime?
   scanLatitude   Float?
   scanLongitude  Float?
   totalCents    Int
@@ -93,6 +94,16 @@ model Order {
 
   items OrderItem[]
   claim Claim?
+  
+  // Logistics & Security
+  securityKeywords String?  // "ROJO-MESA-PATO" (Server generated)
+  proofUrl         String?  // Photo of package
+  deliveryLat      Float?   // GPS Lat at delivery
+  deliveryLng      Float?   // GPS Lng at delivery
+  deliveryTime     DateTime?
+
+  courierId        String?
+  courier          User?     @relation("OrderCourier", fields: [courierId], references: [id], onDelete: SetNull)
 }
 
 model OrderItem {
@@ -126,7 +137,11 @@ model User {
   
   // KYC / Identity
   isVerified      Boolean @default(false)
-  identityDocUrl  String? 
+  dni             String? @unique // Documento Nacional de Identidad
+  documentFrontUrl String?
+  documentBackUrl  String?
+  identitySelfieUrl String?
+  identityDocUrl  String? // Deprecated in favor of Front/Back, keep for legacy or extra docs 
   
   // Reputation
   reputationScore Int            @default(50) // Start neutral
@@ -146,6 +161,14 @@ model User {
   otpCode      String?
   otpExpiresAt DateTime?
 
+  // Logistics Hierarchy
+  companyOwned   LogisticsCompany? @relation("CompanyOwner")
+  
+  workerOfId     String?
+  workerOf       LogisticsCompany? @relation("CompanyWorkers", fields: [workerOfId], references: [id])
+  
+  assignedOrders Order[]           @relation("OrderCourier")
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -156,9 +179,46 @@ model User {
   favorites Favorite[]
   reviews   Review[]
   claims    Claim[]
+  auditLogs AuditLog[]
 
   @@index([role])
   @@index([isActive])
+}
+
+model LogisticsCompany {
+  id          String   @id @default(cuid())
+  name        String
+  cuit        String   // Tax ID (Sensitive)
+  phone       String
+  email       String
+  address     String?
+  
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  ownerId     String   @unique
+  owner       User     @relation("CompanyOwner", fields: [ownerId], references: [id])
+  
+  workers     User[]   @relation("CompanyWorkers")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  executorId String
+  executor   User     @relation(fields: [executorId], references: [id])
+  
+  action     String   // e.g. "BAN_USER", "FORCE_DELIVERY", " VIEW_SENSITIVE_DATA"
+  entity     String   // e.g. "User", "Order"
+  entityId   String
+  metadata   String?  // JSON string with before/after data
+  
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime @default(now())
 }
 
 model Session {
@@ -185,6 +245,8 @@ enum OrderStatus {
 enum UserRole {
   USER
   ADMIN
+  LOGISTICS_ADMIN // Dueño de Flota
+  DRIVER          // Repartidor
 }
 
 enum ReputationTier {

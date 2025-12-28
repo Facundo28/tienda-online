@@ -71,7 +71,14 @@ export async function getCurrentUser() {
 
   const session = await prisma.session.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    include: { 
+      user: {
+        include: {
+          companyOwned: { select: { name: true, isVerified: true } },
+          workerOf: { select: { name: true, isVerified: true } }
+        }
+      } 
+    },
   });
 
   if (!session) return null;
