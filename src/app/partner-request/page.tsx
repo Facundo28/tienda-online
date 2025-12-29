@@ -1,3 +1,4 @@
+import RequestForm from "./RequestForm";
 import Link from "next/link";
 import { Check, Truck, ShieldCheck, FileText, AlertTriangle, Rocket, DollarSign, MapPin } from "lucide-react";
 
@@ -60,12 +61,9 @@ export default function PartnerRequestPage() {
                 <p className="text-green-100 mb-8">
                     Si cumples con los requisitos, envíanos tu postulación para comenzar el proceso de alta y verificación manual.
                 </p>
-                <a 
-                    href="mailto:partners@marketonline.com?subject=Solicitud Alta Partner Logistico"
-                    className="block w-full bg-white text-[#12753e] font-bold py-4 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"
-                >
-                    Enviar Documentación
-                </a>
+                
+                <RequestForm />
+
                 <p className="mt-4 text-xs text-green-200">
                     Te responderemos en un plazo de 48hs hábiles.
                 </p>

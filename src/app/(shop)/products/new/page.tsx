@@ -2,7 +2,6 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ProductForm from "./ProductForm";
-
 import { saveUploadedFile } from "@/lib/file-upload";
 
 export default async function NewProductPage() {
@@ -14,13 +13,22 @@ export default async function NewProductPage() {
       const price = parseFloat(formData.get("price") as string) * 100;
       const description = formData.get("description") as string;
       const category = formData.get("category") as any;
+      const stock = parseInt(formData.get("stock") as string) || 1;
+      const condition = formData.get("condition") as string || "NEW";
       const isBoosted = formData.get("isBoosted") === "true";
-      const imageFile = formData.get("image") as File;
       
-      let imageUrl = "";
-      if (imageFile && imageFile.size > 0) {
-          imageUrl = await saveUploadedFile(imageFile, "products");
+      const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
+      
+      let imageUrls: string[] = [];
+      
+      for (const file of imageFiles) {
+          if (file.size > 0) {
+              const url = await saveUploadedFile(file, "products");
+              imageUrls.push(url);
+          }
       }
+      
+      const finalImageUrl = imageUrls.join("\n");
 
       // Basic validation
       if(!name || !price) throw new Error("Datos incorrectos");
@@ -31,8 +39,10 @@ export default async function NewProductPage() {
               priceCents: Math.round(price),
               description,
               category: category || "OTROS",
+              stock,
+              condition,
               userId: user.id,
-              imageUrl: imageUrl || "/placeholder.png",
+              imageUrl: finalImageUrl || "/placeholder.png",
               boostedUntil: isBoosted ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null 
           }
       });
@@ -41,12 +51,7 @@ export default async function NewProductPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8">
-      <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Publicar Nuevo Producto</h1>
-          <p className="text-gray-500">Completa la información para comenzar a vender.</p>
-      </div>
-      
-      <ProductForm user={user} createProductAction={createProductAction} />
+      <ProductForm user={user} action={createProductAction} />
     </div>
   );
 }

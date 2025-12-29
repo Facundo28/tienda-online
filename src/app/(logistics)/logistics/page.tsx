@@ -4,8 +4,15 @@ import { UserRole } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { UnassignedOrders } from "./UnassignedOrders";
-import { createWorkerAction, deleteWorkerAction, toggleWorkerStatusAction } from "./actions";
-import { ShoppingBag, Package, UserPlus, Users } from "lucide-react";
+import { createWorkerAction } from "./actions";
+import { ShoppingBag, Package, UserPlus, Users, Truck, Wallet, ChevronRight, MoreVertical, TrendingUp, Map as MapIcon, Home } from "lucide-react";
+import { RevenueChart } from "@/components/logistics/RevenueChart";
+import { startOfDay, subDays, format, subMinutes, formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { FleetMapWrapper } from "@/components/logistics/FleetMapWrapper";
+import { CreateWorkerModal } from "@/components/logistics/CreateWorkerModal";
+import { WorkerListActions } from "@/components/logistics/WorkerListActions";
+import { AlertsCenter } from "@/components/logistics/AlertsCenter";
 
 export default async function LogisticsDashboard() {
   const user = await requireUser();
@@ -14,12 +21,12 @@ export default async function LogisticsDashboard() {
      redirect("/");
   }
 
-
   const company = await prisma.logisticsCompany.findUnique({
       where: { ownerId: user.id },
       include: { 
           workers: {
-              orderBy: { createdAt: 'desc' }
+              orderBy: { createdAt: 'desc' },
+              include: { assignedOrders: { where: { deliveryStatus: 'ON_WAY' } } }
           }
       }
   });
@@ -33,196 +40,242 @@ export default async function LogisticsDashboard() {
       );
   }
 
-   // Obtener Pedidos No Asignados (Solicitudes de envío de la tienda)
+   // 1. Unassigned Orders
    const unassignedOrders = await prisma.order.findMany({
        where: {
-           deliveryMethod: 'DELIVERY', // Envío Pendiente
-           deliveryStatus: 'PENDING',  // Aún no asignado
-           courierId: null             // Doble verificación
+           deliveryMethod: 'DELIVERY', 
+           deliveryStatus: 'PENDING',  
+           courierId: null             
        },
        orderBy: { createdAt: 'asc' }
    });
 
-   return (
-    <div className="space-y-8 p-6 bg-gray-50/50 min-h-screen">
-       {/* Cabecera Premium */}
-       <header className="bg-gradient-to-r from-[#12753e] to-[#0e5c30] text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+   // 2. Revenue Data (Last 7 Days)
+   const today = new Date();
+   const sevenDaysAgo = subDays(today, 6);
+   
+   const weeklyDeliveries = await prisma.order.findMany({
+       where: {
+           deliveryStatus: 'DELIVERED',
+           deliveryTime: { gte: startOfDay(sevenDaysAgo) },
+           courier: { workerOfId: company.id } // Only my company's deliveries
+       },
+       select: { totalCents: true, deliveryTime: true }
+   });
+   
+   // Aggregate by day
+   // Create array of last 7 days names
+   const chartData = Array.from({ length: 7 }).map((_, i) => {
+       const d = subDays(today, 6 - i); // Chronological
+       const dayKey = format(d, 'yyyy-MM-dd');
+       const dayLabel = format(d, 'EEE', { locale: es }); // "lun", "mar"
+       
+       // Sum totals for this day
+       const total = weeklyDeliveries
+           .filter((o: any) => o.deliveryTime && format(o.deliveryTime, 'yyyy-MM-dd') === dayKey)
+           .reduce((acc: number, curr: any) => acc + curr.totalCents, 0);
            
+       return { name: dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1), total };
+       return { name: dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1), total };
+   });
+
+   // 3. Real All-Time Revenue
+   const allTimeRevenue = await prisma.order.aggregate({
+       where: {
+           deliveryStatus: 'DELIVERED',
+           courier: { workerOfId: company.id }
+       },
+       _sum: { totalCents: true }
+   });
+
+   const totalRealRevenue = allTimeRevenue._sum.totalCents || 0;
+
+   // Calculate real stats
+   const totalDrivers = company.workers.length;
+   const activeDrivers = company.workers.filter(w => w.isActive).length;
+
+   // 4. Alerts Logic (Real Time)
+   const thirtyMinutesAgo = subMinutes(today, 30);
+   const fortyFiveMinutesAgo = subMinutes(today, 45);
+
+   const criticalOrders = await prisma.order.findMany({
+       where: {
+           deliveryStatus: 'PENDING',
+           createdAt: { lt: thirtyMinutesAgo },
+           deliveryMethod: 'DELIVERY'
+       },
+       take: 5
+   });
+
+   const warningOrders = await prisma.order.findMany({
+        where: {
+            deliveryStatus: 'ON_WAY',
+            updatedAt: { lt: fortyFiveMinutesAgo },
+            courier: { workerOfId: company.id }
+        },
+        take: 5
+   });
+
+   const alerts = [
+       ...criticalOrders.map(o => ({
+           id: `crit-${o.id}`,
+           type: "critical" as const,
+           title: "Demora en Despacho",
+           message: `Pedido #${o.id.slice(-4)} pendiente hace ${formatDistanceToNow(o.createdAt, { locale: es })}`,
+           time: format(o.createdAt, 'HH:mm')
+       })),
+       ...warningOrders.map(o => ({
+           id: `warn-${o.id}`,
+           type: "warning" as const,
+           title: "Demora en Entrega",
+           message: `Pedido #${o.id.slice(-4)} en camino hace ${formatDistanceToNow(o.updatedAt, { locale: es })}`,
+           time: format(o.updatedAt, 'HH:mm')
+       }))
+   ];
+
+   return (
+    <div className="space-y-6 p-6 bg-gray-50/50 min-h-screen">
+       {/* Cabecera Premium */}
+       <header className="bg-gradient-to-br from-[#12753e] to-[#0e5c30] text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl opacity-50" />
            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                <div>
-                   <div className="flex items-center gap-3 mb-2">
-                       <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase border border-white/10">
-                           Panel de Control
-                       </span>
-                       <span className={`px-2 py-0.5 rounded text-[10px] font-mono bg-black/30 border border-white/10`}>
-                           {company.isVerified ? 'VERIFICADO' : 'PENDIENTE'}
-                       </span>
-                       <Link href="/" className="ml-2 bg-white/20 hover:bg-white/30 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase border border-white/10 flex items-center gap-1 transition-colors">
-                           <ShoppingBag className="w-3 h-3" /> Ir a la Tienda
-                       </Link>
-                   </div>
-                   <h1 className="text-4xl font-bold mb-1 tracking-tight">{company.name}</h1>
-                   <p className="text-emerald-100 flex items-center gap-2 text-lg">
-                       <span className="opacity-70">Dueño:</span> 
-                       <span className="font-semibold bg-white/10 px-2 rounded">{user.name}</span>
-                   </p>
+                    <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">{company.name}</h1>
+                    <div className="flex items-center gap-6 md:gap-8">
+                        <div>
+                            <p className="text-emerald-200 text-xs font-bold uppercase tracking-wider mb-1">Balance Total</p>
+                            <p className="text-3xl font-bold font-mono">${(totalRealRevenue / 100).toLocaleString('es-AR')}</p>
+                        </div>
+                        <div className="h-10 w-px bg-white/10"></div>
+                        <div>
+                             <p className="text-emerald-200 text-xs font-bold uppercase tracking-wider mb-1">Flota Activa</p>
+                             <div className="flex items-center gap-2">
+                                <span className="text-3xl font-bold">{activeDrivers}</span>
+                                <span className="text-sm opacity-50 font-medium">/ {totalDrivers}</span>
+                             </div>
+                        </div>
+                    </div>
                </div>
                
-               <div className="flex gap-4">
-                   <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center min-w-[120px]">
-                       <div className="text-3xl font-bold mb-1">{company.workers.length}</div>
-                       <div className="text-xs text-emerald-100 uppercase font-bold tracking-wider">Conductores</div>
-                   </div>
-                   <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center min-w-[120px]">
-                       <div className="text-3xl font-bold mb-1">{unassignedOrders.length}</div>
-                       <div className="text-xs text-emerald-100 uppercase font-bold tracking-wider">Pendientes</div>
-                   </div>
+               <div className="flex gap-3">
+                    <Link href="/" className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 transition-all flex items-center justify-center" title="Ir a la Tienda">
+                        <Home className="w-6 h-6" />
+                    </Link>
+                    <Link href="/logistics/settings" className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 transition-all flex items-center justify-center" title="Configuración">
+                        <MoreVertical className="w-6 h-6" />
+                    </Link>
                </div>
            </div>
        </header>
 
-       {/* Sección de Pedidos - Estilo Tarjeta */}
-       <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-           <div className="flex items-center justify-between mb-6">
-               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-600">
-                        <Package className="w-5 h-5" />
-                   </div>
-                   Pedidos por Asignar
-                   <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">{unassignedOrders.length}</span>
-               </h2>
-           </div>
-           
-           <UnassignedOrders 
-                orders={unassignedOrders} 
-                drivers={company.workers} 
-           />
-       </section>
-
-       <div className="grid md:grid-cols-3 gap-8">
-           {/* Formulario de Alta de Trabajador - Tarjeta Premium */}
-           <div className="md:col-span-1 bg-white p-8 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 h-fit sticky top-6">
-               <h3 className="font-bold text-xl mb-6 flex items-center gap-3 text-gray-800">
-                   <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-[#12753e]">
-                        <UserPlus className="w-5 h-5" />
-                   </div>
-                   Alta de Conductor
-               </h3>
-               
-               <form action={createWorkerAction} className="space-y-5">
-                   <div className="space-y-1">
-                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Nombre Completo</label>
-                       <input 
-                            name="name" 
-                            required 
-                            className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-[#12753e] focus:border-[#12753e] outline-none transition-all" 
-                            placeholder="Ej: Juan Perez" 
-                        />
-                   </div>
-                   <div className="space-y-1">
-                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Email (Usuario)</label>
-                       <input 
-                            name="email" 
-                            type="email" 
-                            required 
-                            className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-[#12753e] focus:border-[#12753e] outline-none transition-all" 
-                            placeholder="juan@flota.com" 
-                        />
-                   </div>
-                   <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1">
-                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">DNI / Cédula</label>
-                           <input 
-                                name="dni" 
-                                required 
-                                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-[#12753e] outline-none" 
-                                placeholder="12345678" 
-                            />
-                       </div>
-                       <div className="space-y-1">
-                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Teléfono</label>
-                           <input 
-                                name="phone" 
-                                required 
-                                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-[#12753e] outline-none" 
-                                placeholder="11..." 
-                            />
-                       </div>
-                   </div>
-                   
-                   <button className="w-full bg-[#12753e] hover:bg-[#0e5c30] text-white font-bold py-4 rounded-xl shadow-lg shadow-green-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                       <span>Registrar Conductor</span>
-                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                       </svg>
-                   </button>
-               </form>
-           </div>
-
-           {/* Workers List - Modern Table */}
-           <div className="md:col-span-2 space-y-6">
-               <div className="flex items-center justify-between">
-                   <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                       <span className="w-2 h-8 bg-[#12753e] rounded-full"></span>
-                       Tu Equipo
-                   </h3>
-                   <Link href="/logistics/drivers" className="text-sm font-medium text-[#12753e] hover:underline">Ver todos</Link>
+       {/* Grid: Map, Graphs & Alerts */}
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+           {/* Fleet Map */}
+           <div className="bg-white rounded-3xl p-1 shadow-sm border border-gray-100 h-[350px] relative">
+               <div className="absolute top-4 left-4 z-[400] bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                   <span className="text-xs font-bold text-gray-700">En Vivo</span>
                </div>
+               <FleetMapWrapper drivers={company.workers} />
+           </div>
 
-               {company.workers.length === 0 ? (
-                   <div className="bg-white/50 p-12 rounded-3xl text-center text-gray-400 border-2 border-dashed border-gray-200">
-                       <div className="mb-4 opacity-20 flex justify-center">
-                           <Users className="w-16 h-16" />
+           {/* Revenue Chart */}
+           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-[350px] flex flex-col">
+               <div className="flex justify-between items-center mb-6">
+                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                       <TrendingUp className="w-5 h-5 text-green-600" />
+                       Ingresos (7d)
+                   </h3>
+               </div>
+               <div className="flex-1">
+                   <RevenueChart data={chartData} />
+               </div>
+           </div>
+
+           {/* Alerts Center */}
+           <div className="h-[350px]">
+               <AlertsCenter alerts={alerts} />
+           </div>
+       </div>
+
+       {/* Main Content Grid: Orders & Workers */}
+       <div className="grid lg:grid-cols-2 gap-6">
+           {/* Unassigned Orders */}
+           <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-fit">
+               <div className="flex items-center justify-between mb-6">
+                   <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-600">
+                            <Package className="w-5 h-5" />
                        </div>
-                       <p className="text-lg font-medium text-gray-600">Aún no tienes conductores.</p>
-                       <p className="text-sm">Registra el primero usando el formulario.</p>
-                   </div>
-               ) : (
-                   <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-                       <table className="w-full text-left">
-                           <thead className="bg-gray-50/80 border-b border-gray-100">
-                               <tr>
-                                   <th className="p-5 font-bold text-gray-400 text-xs uppercase tracking-wider">Conductor</th>
-                                   <th className="p-5 font-bold text-gray-400 text-xs uppercase tracking-wider">Contacto</th>
-                                   <th className="p-5 font-bold text-gray-400 text-xs uppercase tracking-wider">Estado</th>
-                                   <th className="p-5 font-bold text-gray-400 text-xs uppercase tracking-wider text-right">Acciones</th>
-                               </tr>
-                           </thead>
-                           <tbody className="divide-y divide-gray-50">
-                               {company.workers.map((worker: any) => (
-                                   <tr key={worker.id} className="hover:bg-gray-50/80 transition-colors group">
-                                       <td className="p-5">
-                                           <div className="flex items-center gap-4">
-                                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center font-bold text-gray-600 text-sm">
-                                                   {worker.name.substring(0,2).toUpperCase()}
-                                               </div>
-                                               <div>
-                                                   <div className="font-bold text-gray-900">{worker.name}</div>
-                                                   <div className="text-xs text-gray-500">{worker.email}</div>
-                                               </div>
-                                           </div>
-                                       </td>
-                                       <td className="p-5">
-                                           <div className="text-sm font-mono text-gray-600">{worker.phone || '-'}</div>
-                                       </td>
-                                       <td className="p-5">
-                                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${worker.isActive ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                                               <span className={`w-1.5 h-1.5 rounded-full ${worker.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                               {worker.isActive ? 'ACTIVO' : 'INACTIVO'}
-                                           </span>
-                                       </td>
-                                       <td className="p-5 text-right">
-                                           <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#12753e] transition-colors">
-                                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                           </button>
-                                       </td>
-                                   </tr>
-                               ))}
-                           </tbody>
-                       </table>
-                   </div>
-               )}
+                       Despacho
+                       <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-bold border border-yellow-200">{unassignedOrders.length}</span>
+                   </h2>
+               </div>
+               
+               <UnassignedOrders 
+                    orders={unassignedOrders} 
+                    drivers={company.workers} 
+               />
+           </section>
+
+           {/* Workers List Mini */}
+           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-fit">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-gray-400" />
+                        Conductores
+                    </h3>
+                    <Link href="/logistics/drivers" className="text-sm font-medium text-[#12753e] hover:underline flex items-center gap-1">
+                        Ver Lista <ChevronRight className="w-4 h-4" />
+                    </Link>
+                </div>
+
+                {company.workers.length === 0 ? (
+                    <p className="text-center text-gray-400 py-8">No hay conductores.</p>
+                ) : (
+                    <div className="space-y-4">
+                        {company.workers.slice(0, 5).map((worker: any) => (
+                            <div key={worker.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 text-sm">
+                                        {worker.name.substring(0,2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-900">{worker.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs text-gray-400 flex items-center gap-1">
+                                                {worker.isActive ? (
+                                                    <span className="text-green-600 flex items-center gap-1">● Online</span>
+                                                ) : (
+                                                    <span className="text-gray-400">● Offline</span>
+                                                )}
+                                            </p>
+                                            {worker.vehiclePlate && (
+                                                <span className="text-[10px] bg-gray-100 text-gray-500 px-1 rounded uppercase font-mono border border-gray-200">
+                                                    {worker.vehiclePlate}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        {worker.assignedOrders.length > 0 ? (
+                                            <span className="text-xs font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg">
+                                                {worker.assignedOrders.length} envíos
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs font-bold text-gray-300">Libre</span>
+                                        )}
+                                    </div>
+                                    <WorkerListActions workerId={worker.id} isActive={worker.isActive} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                
+                <CreateWorkerModal />
            </div>
        </div>
     </div>

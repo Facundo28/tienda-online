@@ -90,8 +90,39 @@ export async function updateProfile(formData: FormData) {
     },
   });
 
-  revalidatePath("/account");
-  revalidatePath("/checkout");
   revalidatePath("/");
   redirect("/account");
+}
+
+export async function updateUserPremiumProfile(formData: FormData) {
+  const user = await requireUser();
+
+  // Validate Premium Status
+  if (!user.membershipExpiresAt || user.membershipExpiresAt < new Date()) {
+      throw new Error("Must be a Premium member to edit this");
+  }
+
+  const instagram = formData.get("instagram") as string;
+  const facebook = formData.get("facebook") as string;
+  const website = formData.get("website") as string;
+  const bannerFile = formData.get("banner");
+
+  let bannerUrl: string | undefined;
+
+  if (bannerFile instanceof File && bannerFile.size > 0) {
+    bannerUrl = await saveUploadedFile(bannerFile, "banners");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+        socialInstagram: instagram,
+        socialFacebook: facebook,
+        socialWebsite: website,
+        ...(bannerUrl ? { bannerUrl } : {}),
+    }
+  });
+
+  revalidatePath("/account");
+  revalidatePath(`/users/${user.id}`); // Public profile
 }

@@ -37,7 +37,13 @@ export async function createWorkerAction(formData: FormData) {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const phone = formData.get("phone") as string;
-    // const dni = formData.get("dni") as string; // Not in schema yet
+    const dni = formData.get("dni") as string;
+    
+    // Vehicle Info
+    const vehicleType = formData.get("vehicleType") as string;
+    const vehiclePlate = formData.get("vehiclePlate") as string;
+    const vehicleModel = formData.get("vehicleModel") as string;
+    const vehicleColor = formData.get("vehicleColor") as string;
 
     // Create User account for Worker
     const tempPassword = await hash("123456", 12);
@@ -57,6 +63,12 @@ export async function createWorkerAction(formData: FormData) {
             passwordHash: tempPassword,
             role: "DRIVER",
             phone,
+            dni,
+            // Vehicle
+            vehicleType,
+            vehiclePlate,
+            vehicleModel,
+            vehicleColor,
             isVerified: true,
             workerOfId: company.id // Link to company
         }

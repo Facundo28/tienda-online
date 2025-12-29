@@ -44,3 +44,22 @@ export async function completeDeliveryAction(orderId: string, lat: number, lng: 
   revalidatePath("/delivery");
   redirect("/delivery");
 }
+
+export async function assignOrderToMe(orderId: string, formData: FormData) {
+    const user = await requireUser();
+    
+    // Check if order is still available
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new Error("Order not found");
+    if (order.courierId) throw new Error("This order is already taken");
+
+    await prisma.order.update({
+        where: { id: orderId },
+        data: {
+            courierId: user.id,
+            deliveryStatus: DeliveryStatus.ON_WAY // Or ASSIGNED. ON_WAY makes it active immediately.
+        }
+    });
+
+    revalidatePath("/delivery");
+}

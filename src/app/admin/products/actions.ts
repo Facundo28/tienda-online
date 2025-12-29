@@ -1,52 +1,22 @@
 "use server";
 
-import crypto from "node:crypto";
-import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
-
-import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
-import { ProductCategory } from "@/generated/prisma/enums";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { saveUploadedFile } from "@/lib/file-upload";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-async function saveUploadedImage(file: File) {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Formato de imagen no permitido (usa JPG/PNG/WebP)");
+async function saveUploadedImage(image: File) {
+  if (image.size > MAX_IMAGE_BYTES) {
+    throw new Error(`La imagen ${image.name} supera el tamaño máximo de 10MB.`);
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error("La imagen es demasiado grande (máx 5MB)");
+  if (!ALLOWED_IMAGE_TYPES.includes(image.type)) {
+    throw new Error(`El tipo de archivo ${image.type} no es válido. Solo JPEG, PNG y WebP.`);
   }
-
-  const ext =
-    file.type === "image/png"
-      ? "png"
-      : file.type === "image/webp"
-        ? "webp"
-        : "jpg";
-
-  const filename = `${crypto.randomBytes(16).toString("hex")}.${ext}`;
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  await writeFile(path.join(uploadsDir, filename), buffer);
-
-  return `/uploads/${filename}`;
-}
-
-function parseImageUrlList(raw: string) {
-  return raw
-    .split(/[\n,]+/g)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return await saveUploadedFile(image, "products");
 }
 
 async function saveUploadedImages(files: File[]) {
@@ -58,29 +28,38 @@ async function saveUploadedImages(files: File[]) {
   return urls;
 }
 
-function parseCategory(value: FormDataEntryValue | null): ProductCategory {
-  if (typeof value !== "string") return ProductCategory.OTROS;
-  const raw = value.trim();
-  if (Object.values(ProductCategory).includes(raw as ProductCategory)) {
-    return raw as ProductCategory;
+function parseStock(formData: FormData): number {
+    const stockRaw = formData.get("stock");
+    const stock = Number(stockRaw);
+    if (!Number.isFinite(stock)) return 1;
+    return Math.max(0, Math.floor(stock));
+}
+
+function parseCondition(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string") return "USED"; 
+  const raw = value.trim().toUpperCase();
+  if (["NEW", "USED", "REFURBISHED"].includes(raw)) {
+    return raw;
   }
-  return ProductCategory.OTROS;
+  return "USED";
+}
+
+function parseCategory(value: FormDataEntryValue | null): string {
+   if (typeof value !== "string") return "OTROS";
+   return value.trim();
 }
 
 function parsePriceCents(formData: FormData): number {
   const priceRaw = formData.get("price");
   if (typeof priceRaw === "string") {
+    // Replace comma with dot for locales like ES
     const normalized = priceRaw.trim().replace(",", ".");
-    const pesos = Number.parseFloat(normalized);
-    if (!Number.isFinite(pesos)) return 0;
-    return Math.max(0, Math.round(pesos * 100));
+    const val = parseFloat(normalized);
+    if (Number.isFinite(val)) return Math.round(val * 100);
   }
-
-  // Backward-compat: older forms may still send priceCents
-  const centsRaw = formData.get("priceCents");
-  const cents = Math.floor(Number(centsRaw || 0));
-  if (!Number.isFinite(cents)) return 0;
-  return Math.max(0, cents);
+  // Fallback to direct priceCents if present
+  const cents = Number(formData.get("priceCents"));
+  return Number.isFinite(cents) ? cents : 0;
 }
 
 export async function createProduct(formData: FormData) {
@@ -89,6 +68,8 @@ export async function createProduct(formData: FormData) {
   const description = String(formData.get("description") || "").trim();
   const category = parseCategory(formData.get("category"));
   const priceCents = parsePriceCents(formData);
+  const stock = parseStock(formData);
+  const condition = parseCondition(formData.get("condition"));
   const imageUrl = String(formData.get("imageUrl") || "").trim();
   const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
 
@@ -96,125 +77,118 @@ export async function createProduct(formData: FormData) {
     throw new Error("Nombre, descripción y precio son requeridos");
   }
 
-  const manualUrls = imageUrl ? parseImageUrlList(imageUrl) : [];
+  // Combine manual URLs (from existing or pasted) and New Uploads
+  const manualUrls = imageUrl ? imageUrl.split(/[\n,]+/g).map((s) => s.trim()).filter(Boolean) : [];
   const uploadedUrls = imageFiles.length > 0 ? await saveUploadedImages(imageFiles) : [];
-  const finalUrls = [...uploadedUrls, ...manualUrls];
+  
+  const finalUrls = [...uploadedUrls, ...manualUrls].slice(0, 5); // Max 5
   const finalImageUrl: string | null = finalUrls.length > 0 ? finalUrls.join("\n") : null;
 
   await prisma.product.create({
     data: {
       name,
       description,
-      category,
+      category: category as any,
       userId: user.id,
       priceCents,
+      stock,
+      condition: condition as any,
       imageUrl: finalImageUrl,
-      isActive: true,
+      isActive: true, // Default active
     },
   });
 
   revalidatePath("/admin/products");
-  revalidatePath("/products");
+  revalidatePath("/vender");
+  redirect("/admin/products");
 }
 
-export async function toggleProduct(productId: string, isActive: boolean) {
+export async function updateProduct(id: string, formData: FormData) {
   const user = await requireUser();
-
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { userId: true },
-  });
-
+  
+  const product = await prisma.product.findUnique({ where: { id } });
   if (!product) throw new Error("Producto no encontrado");
-  if (user.role !== "ADMIN" && product.userId !== user.id) {
-    throw new Error("No autorizado");
-  }
-
-  await prisma.product.update({
-    where: { id: productId },
-    data: { isActive },
-  });
-
-  revalidatePath("/admin/products");
-  revalidatePath("/products");
-}
-
-export async function updateProduct(productId: string, formData: FormData) {
-  const user = await requireUser();
-
-  const existing = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { userId: true, imageUrl: true },
-  });
-
-  if (!existing) throw new Error("Producto no encontrado");
-  if (user.role !== "ADMIN" && existing.userId !== user.id) {
-    throw new Error("No autorizado");
+  if (product.userId !== user.id && user.role !== "ADMIN") {
+      throw new Error("No tienes permiso");
   }
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
   const category = parseCategory(formData.get("category"));
   const priceCents = parsePriceCents(formData);
-
+  const stock = parseStock(formData);
+  const condition = parseCondition(formData.get("condition"));
   const imageUrl = String(formData.get("imageUrl") || "").trim();
   const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
 
-  if (!name || !description || !priceCents) {
-    throw new Error("Nombre, descripción y precio son requeridos");
+  if (!name || isNaN(priceCents)) {
+    throw new Error("Datos inválidos");
   }
 
-  const existingUrls = existing.imageUrl ? parseImageUrlList(existing.imageUrl) : [];
-  const baseUrls = imageUrl ? parseImageUrlList(imageUrl) : existingUrls;
+  // Image Logic
+  const manualUrls = imageUrl ? imageUrl.split(/[\n,]+/g).map((s) => s.trim()).filter(Boolean) : [];
   const uploadedUrls = imageFiles.length > 0 ? await saveUploadedImages(imageFiles) : [];
-  const nextUrls = [...baseUrls, ...uploadedUrls];
-  const nextImageUrl: string | null = nextUrls.length > 0 ? nextUrls.join("\n") : null;
+  
+  const finalUrls = [...manualUrls, ...uploadedUrls].slice(0, 5); 
+  const finalImageUrl: string | null = finalUrls.length > 0 ? finalUrls.join("\n") : null;
 
   await prisma.product.update({
-    where: { id: productId },
+    where: { id },
     data: {
       name,
       description,
-      category,
+      category: category as any,
       priceCents,
-      imageUrl: nextImageUrl,
+      stock,
+      condition: condition as any,
+      imageUrl: finalImageUrl,
     },
   });
 
   revalidatePath("/admin/products");
-  revalidatePath("/products");
+  revalidatePath(`/admin/products/${id}`);
+  revalidatePath("/vender");
 }
 
-export async function deleteProduct(productId: string) {
+export async function deleteProduct(id: string) {
   const user = await requireUser();
-
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { userId: true },
-  });
-
-  if (!product) throw new Error("Producto no encontrado");
-  if (user.role !== "ADMIN" && product.userId !== user.id) {
-    throw new Error("No autorizado");
+  const product = await prisma.product.findUnique({ where: { id } });
+  if(!product) return;
+  
+  if (product.userId !== user.id && user.role !== "ADMIN") {
+      throw new Error("No autorizado");
   }
 
   try {
-    await prisma.product.delete({
-      where: { id: productId },
-    });
-  } catch (error: any) {
-    if (error.code === 'P2003') {
-      // Foreign key constraint failed (e.g. invalidates OrderItem)
-      // Soft-delete instead
-      await prisma.product.update({
-        where: { id: productId },
-        data: { isActive: false },
-      });
-    } else {
-      throw error;
-    }
+      await prisma.product.delete({ where: { id } });
+  } catch(e: any) {
+      if (e.code === 'P2003') {
+          // Soft delete
+           await prisma.product.update({
+               where: { id },
+               data: { isActive: false }
+           });
+      } else {
+          throw e;
+      }
   }
-
   revalidatePath("/admin/products");
-  revalidatePath("/products");
+  revalidatePath("/vender");
+}
+
+export async function toggleProduct(id: string, isActive: boolean) {
+    const user = await requireUser();
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return;
+
+    if (product.userId !== user.id && user.role !== "ADMIN") {
+        throw new Error("No autorizado");
+    }
+
+    await prisma.product.update({
+        where: { id },
+        data: { isActive }
+    });
+    revalidatePath("/admin/products");
+    revalidatePath("/vender");
 }

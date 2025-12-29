@@ -48,8 +48,8 @@ export default async function AdminUsersPage({
       </form>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[800px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="px-6 py-3 font-semibold text-gray-900">Usuario</th>

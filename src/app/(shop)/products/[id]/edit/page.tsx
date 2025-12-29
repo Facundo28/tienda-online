@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import ProductForm from "../../new/ProductForm";
+import { saveUploadedFile } from "@/lib/file-upload";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -23,7 +25,29 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       const name = formData.get("name") as string;
       const price = parseFloat(formData.get("price") as string) * 100;
       const description = formData.get("description") as string;
-      const isActive = formData.get("isActive") === "on";
+      const stock = parseInt(formData.get("stock") as string) || 0;
+      const condition = formData.get("condition") as string;
+      
+      // isActive logic from Form: "true" text means Active (Toggle ON)
+      // The shared form sends "isActive" as "true" or "false".
+      const isActive = formData.get("isActive") === "true";
+      
+      // Image Handling
+      const existingUrlsRaw = formData.get("imageUrl") as string || "";
+      const existingUrls = existingUrlsRaw.split('\n').filter(Boolean);
+      
+      const imageFiles = formData.getAll("images").filter((v): v is File => v instanceof File);
+      let newUrls: string[] = [];
+      
+      for (const file of imageFiles) {
+          if (file.size > 0) {
+              const url = await saveUploadedFile(file, "products");
+              newUrls.push(url);
+          }
+      }
+      
+      const finalUrls = [...existingUrls, ...newUrls].slice(0, 5); // Max 5 enforcement
+      const finalImageUrl = finalUrls.join("\n");
 
       await prisma.product.update({
           where: { id },
@@ -31,45 +55,48 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
               name,
               priceCents: Math.round(price),
               description,
-              isActive
+              stock,
+              condition,
+              isActive,
+              imageUrl: finalImageUrl
           }
+      });
+      revalidatePath("/vender");
+      revalidatePath(`/products/${id}`);
+      redirect("/vender");
+  }
+
+  async function deleteProductAction() {
+      "use server";
+      await prisma.product.delete({
+          where: { id }
       });
       revalidatePath("/vender");
       redirect("/vender");
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-6">Editar Producto</h1>
+    <div className="max-w-7xl mx-auto p-4 sm:p-8">
+      <div className="mb-4">
+          <a href="/vender" className="text-sm text-gray-500 hover:text-gray-900 mb-2 inline-block">&larr; Volver al panel</a>
+      </div>
       
-      <form action={updateProductAction} className="space-y-6 bg-white p-6 rounded-xl border border-gray-200">
-          <div>
-              <label className="block text-sm font-medium mb-1">Nombre del producto</label>
-              <input name="name" defaultValue={product.name} required className="w-full border rounded-lg px-3 py-2" />
-          </div>
-          
-           <div>
-              <label className="block text-sm font-medium mb-1">Precio</label>
-              <div className="relative">
-                  <span className="absolute left-3 top-2 text-gray-500">$</span>
-                  <input name="price" defaultValue={product.priceCents / 100} type="number" required className="w-full border rounded-lg pl-7 pr-3 py-2" />
-              </div>
-          </div>
+      <ProductForm 
+        user={user} 
+        action={updateProductAction} 
+        isEditing={true}
+        initialData={{
+            name: product.name,
+            description: product.description,
+            priceCents: product.priceCents,
+            stock: product.stock,
+            condition: product.condition,
+            category: product.category,
+            imageUrl: product.imageUrl,
+            isActive: product.isActive
+        }}
+      />
 
-          <div>
-              <label className="block text-sm font-medium mb-1">Descripción</label>
-              <textarea name="description" defaultValue={product.description || ""} required rows={4} className="w-full border rounded-lg px-3 py-2"></textarea>
-          </div>
-
-          <div className="flex items-center gap-2">
-              <input type="checkbox" name="isActive" id="isActive" defaultChecked={product.isActive} className="w-4 h-4 text-green-600 rounded" />
-              <label htmlFor="isActive" className="text-sm font-medium">Producto Activo (Visible en catálogo)</label>
-          </div>
-
-          <button className="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">
-              Guardar Cambios
-          </button>
-      </form>
     </div>
   );
 }

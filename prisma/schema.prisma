@@ -19,6 +19,8 @@ model Product {
   priceCents  Int
   imageUrl    String?
   isActive    Boolean  @default(true)
+  stock       Int      @default(1)
+  condition   String   @default("NEW") // "NEW" | "USED"
   boostedUntil DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -181,6 +183,24 @@ model User {
   claims    Claim[]
   auditLogs AuditLog[]
 
+  // Logistics Tracking
+  lastLat      Float?
+  lastLng      Float?
+  lastLocationUpdate DateTime?
+
+  // Premium / Seller Profile
+  bannerUrl         String?
+  socialInstagram   String?
+  socialFacebook    String?
+  socialWebsite     String?
+  membershipExpiresAt DateTime?
+
+  // Vehicle Info
+  vehicleType  String? // "MOTO" | "AUTO" | "CAMIONETA"
+  vehiclePlate String?
+  vehicleModel String?
+  vehicleColor String?
+
   @@index([role])
   @@index([isActive])
 }
@@ -319,3 +339,15 @@ enum ClaimType {
   DAMAGED
   OTHER
 }
+
+model AdBanner {
+  id          String   @id @default(cuid())
+  title       String
+  imageUrl    String
+  redirectUrl String?
+  position    String   @default("HOME_MAIN") // "HOME_MAIN", "HOME_SECONDARY", etc.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

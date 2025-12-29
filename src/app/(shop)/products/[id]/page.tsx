@@ -10,6 +10,9 @@ import { BuyNowButton } from "@/components/BuyNowButton";
 import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { ProductReviews } from "@/components/ProductReviews";
 import { answerProductQuestion, createProductQuestion } from "./actions";
+import { ShieldCheck, Truck, Trophy, Star, MapPin } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -40,273 +43,255 @@ type ProductDetailsPageProps = {
 
 export default async function ProductDetailsPage({ params }: ProductDetailsPageProps) {
   const currentUser = await requireUser();
-
   const { id } = await params;
 
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          reputationTier: true,
-          isVerified: true,
+  // Optimizing parallel fetching
+  const [product, favorite] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            reputationTier: true,
+            isVerified: true,
+            city: true,
+            state: true,
+            createdAt: true,
+          },
         },
-      },
-      questions: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              avatarUrl: true,
+        questions: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+              },
             },
           },
         },
       },
-    },
-  }) as any;
+    }) as any,
+    prisma.favorite.findUnique({
+        where: {
+            userId_productId: {
+                userId: currentUser.id,
+                productId: id
+            }
+        }
+    })
+  ]);
 
   if (!product || !product.isActive) notFound();
-
+  
+  const isFavorited = !!favorite;
   const imageUrls = parseImageUrls(product.imageUrl);
-  const owner = product.user as
-    | { id: string; name: string; avatarUrl: string | null; reputationTier: string | null; isVerified: boolean }
-    | null
-    | undefined;
+  const owner = product.user;
   const isOwner = Boolean(owner?.id && owner.id === currentUser.id);
-  const ownerAvatarSrc = owner?.avatarUrl ? normalizeImageSrc(owner.avatarUrl) : null;
-  const questions = (product.questions ?? []) as Array<{
-    id: string;
-    text: string;
-    answerText?: string | null;
-    answeredAt?: Date | null;
-    createdAt: Date;
-    user: { id: string; name: string; avatarUrl: string | null };
-  }>;
+  const questions = (product.questions ?? []);
 
   return (
-    <section>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
-          <p className="text-sm text-foreground/70">{product.description}</p>
-        </div>
+    <section className="max-w-[1200px] mx-auto px-4 py-6">
+       
+       <div className="mb-4 text-sm breadcrumbs text-gray-500 flex items-center gap-2">
+          <Link href="/products" className="hover:text-black transition-colors font-medium">Volver al listado</Link>
+          <span className="text-gray-300">|</span>
+          <span className="text-black font-semibold">{product.category}</span>
+       </div>
 
-        <Link
-          href="/products"
-          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-        >
-          Volver
-        </Link>
-      </div>
+       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-[1.5fr_1fr] lg:grid-cols-[2fr_1fr] gap-6 lg:gap-10">
+          
+          {/* Left Column: Gallery & Description */}
+          <div className="flex flex-col gap-10">
+              
+              {/* Gallery */}
+              <div className="w-full">
+                  <ProductImageGallery imageUrls={imageUrls} alt={product.name} />
+              </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="overflow-hidden rounded-2xl border bg-background">
-          <ProductImageGallery imageUrls={imageUrls} alt={product.name} />
+              <hr className="border-gray-100" />
 
-          <div className="p-5">
-            <div className="text-sm text-foreground/70">Categoría: {product.category}</div>
-          </div>
-        </div>
+              {/* Description */}
+              <div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-6">Lo que tenés que saber de este producto</h3>
+                  <div className="prose prose-sm max-w-none text-gray-600 space-y-4 whitespace-pre-line leading-relaxed">
+                      {product.description}
+                  </div>
+              </div>
 
-        <aside className="rounded-2xl border bg-background p-5">
-          {owner ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="relative h-7 w-7 overflow-hidden rounded-full border bg-foreground/5">
-                  {ownerAvatarSrc ? (
-                    <Image
-                      src={ownerAvatarSrc}
-                      alt={owner.name}
-                      fill
-                      className="object-cover"
-                      sizes="28px"
-                      unoptimized={ownerAvatarSrc.startsWith("/uploads/")}
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground/70">
-                      {initials(owner.name)}
-                    </span>
-                  )}
-                </span>
+              <hr className="border-gray-100" />
 
-                <Link href={`/users/${owner.id}`} className="text-sm hover:underline font-medium">
-                  {owner.name}
-                </Link>
-                {owner.isVerified && (
-                    <span className="text-blue-500" title="Identidad Verificada">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                      </svg>
-                    </span>
+              {/* Questions */}
+              <div id="preguntas">
+                <h3 className="text-xl font-medium text-gray-900 mb-2">Preguntas y respuestas</h3>
+                <p className="text-sm text-gray-500 mb-6">Preguntale al vendedor si tenés dudas.</p>
+
+                <form
+                  className="mb-8 flex gap-3 items-start"
+                  action={createProductQuestion.bind(null, product.id)}
+                >
+                  <textarea
+                    name="text"
+                    className="flex-1 min-h-[50px] rounded-xl border border-gray-300 px-4 py-3 text-sm focus:ring-[#12753e] focus:border-[#12753e] resize-none shadow-sm"
+                    placeholder="Escribí tu pregunta..."
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="bg-[#12753e] text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-[#0e5e32] transition-colors shadow-sm"
+                  >
+                    Preguntar
+                  </button>
+                </form>
+
+                {questions.length === 0 ? (
+                  <div className="text-sm text-gray-400 italic">
+                    Nadie ha preguntado todavía. ¡Sé el primero!
+                  </div>
+                ) : (
+                  <ul className="space-y-6">
+                    {questions.map((q: any) => (
+                        <li key={q.id} className="group">
+                          <div className="flex items-start gap-3 mb-2">
+                              <span className="text-gray-800 text-sm">{q.text}</span>
+                          </div>
+                          
+                          {q.answerText ? (
+                             <div className="flex items-start gap-3 pl-3 border-l-2 border-gray-200 ml-1">
+                                <div className="text-sm text-gray-500">
+                                   {q.answerText} <span className="text-xs text-gray-400 ml-2">{new Date(q.answeredAt).toLocaleDateString()}</span>
+                                </div>
+                             </div>
+                          ) : isOwner && (
+                            <form className="mt-2 pl-4" action={answerProductQuestion.bind(null, q.id)}>
+                               <div className="flex gap-2">
+                                  <input name="answerText" placeholder="Responder..." className="flex-1 text-sm border rounded px-2 py-1" required />
+                                  <button type="submit" className="text-xs bg-blue-600 text-white px-3 py-1 rounded">Responder</button>
+                               </div>
+                            </form>
+                          )}
+                        </li>
+                    ))}
+                  </ul>
                 )}
               </div>
               
-              {(owner.reputationTier) && (
-                   <div className="mt-2 text-xs flex items-center gap-1.5">
-                      <span className="text-foreground/60">Reputación:</span>
-                      <span className={`px-2 py-0.5 rounded-full font-bold
-                          ${owner.reputationTier === 'PLATINUM' ? 'bg-indigo-100 text-indigo-700' : ''}
-                          ${owner.reputationTier === 'VERDE' ? 'bg-green-100 text-green-700' : ''}
-                          ${owner.reputationTier === 'AMARILLO' ? 'bg-yellow-100 text-yellow-700' : ''}
-                          ${owner.reputationTier === 'NARANJA' ? 'bg-orange-100 text-orange-700' : ''}
-                          ${owner.reputationTier === 'ROJO' ? 'bg-red-100 text-red-700' : ''}
-                      `}>
-                          {owner.reputationTier}
-                      </span>
+              <hr className="border-gray-100" />
+
+              {/* Reviews */}
+              <div id="reviews">
+                 <ProductReviews productId={product.id} />
+              </div>
+
+          </div>
+
+          {/* Right Column: Buy Box */}
+          <div className="flex flex-col gap-4">
+               <div className="border border-[#12753e]/40 rounded-xl p-5 bg-white relative overflow-hidden">
+                   {/* Condition & Sold */}
+                   <div className="text-xs text-gray-500 mb-3 flex items-center gap-2">
+                       <span>{product.condition === 'NEW' ? 'Nuevo' : 'Usado'}</span>
+                       <span className="text-gray-300">|</span>
+                       <span>100 vendidos</span>
                    </div>
-              )}
-            </>
-          ) : null}
 
-          <div className="mt-4 text-lg font-semibold">
-            {formatCurrencyFromCents(product.priceCents)}
-          </div>
+                   {/* Title */}
+                   <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-4 text-balance">
+                       {product.name}
+                   </h1>
 
-          <div className="mt-4">
-            <AddToCartButton
-              product={{
-                id: product.id,
-                name: product.name,
-                priceCents: product.priceCents,
-              }}
-            />
+                   {/* Price - GREEN AND BOLD */}
+                   <div className="text-4xl font-normal text-[#12753e] mb-4">
+                       {formatCurrencyFromCents(product.priceCents)}
+                   </div>
 
-            <div className="mt-2">
-              <BuyNowButton
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  priceCents: product.priceCents,
-                }}
-              />
-            </div>
-          </div>
-        </aside>
-      </div>
+                   {/* 5% OFF Banner like Home */}
+                   {!product.priceCents || product.priceCents <= 500000 ? (
+                        <div className="mb-4">
+                             <span className="text-xs bg-[#12753e]/10 text-[#12753e] font-bold px-2 py-1 rounded">5% OFF con transferencia</span>
+                        </div>
+                   ): null}
 
-      <div className="mt-8 rounded-2xl border bg-background p-6" id="preguntas">
-        <h2 className="text-lg font-semibold">Preguntas</h2>
-        <p className="mt-1 text-sm text-foreground/70">
-          Hacé una pregunta sobre este producto.
-        </p>
+                   {/* Stock */}
+                   <div className="mb-6 font-medium text-sm text-gray-900">
+                       {product.stock > 0 ? (
+                           <span className="text-gray-900">Stock disponible: {product.stock}</span>
+                       ) : (
+                            <span className="text-red-500">Sin stock</span>
+                       )}
+                   </div>
 
-        <form
-          className="mt-4 grid gap-3"
-          action={createProductQuestion.bind(null, product.id)}
-        >
-          <textarea
-            name="text"
-            className="min-h-[90px] rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="Escribí tu pregunta..."
-            required
-          />
-          <div>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
-            >
-              Preguntar
-            </button>
-          </div>
-        </form>
+                   {/* Buttons */}
+                   <div className="flex flex-col gap-3">
+                       <BuyNowButton
+                         product={{
+                           id: product.id,
+                           name: product.name,
+                           priceCents: product.priceCents,
+                         }}
+                         className="w-full bg-[#12753e] hover:bg-[#0e5e32] text-white font-semibold py-3.5 rounded-lg transition-colors text-[15px]" 
+                       />
+                       <AddToCartButton
+                         product={{
+                           id: product.id,
+                           name: product.name,
+                           priceCents: product.priceCents,
+                         }}
+                         className="w-full bg-[#e8f5e9] text-[#12753e] font-semibold py-3.5 rounded-lg hover:bg-[#c8e6c9] transition-colors text-[15px]"
+                       />
+                   </div>
 
-        {questions.length === 0 ? (
-          <div className="mt-6 text-sm text-foreground/70">
-            Todavía no hay preguntas.
-          </div>
-        ) : (
-          <ul className="mt-6 grid gap-3">
-            {questions.map((q) => {
-              const qUser = q.user;
-              const qUserAvatarSrc = qUser.avatarUrl
-                ? normalizeImageSrc(qUser.avatarUrl)
-                : null;
-              const createdLabel = new Intl.DateTimeFormat("es-AR", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }).format(q.createdAt);
-
-              return (
-                <li key={q.id} className="rounded-xl border bg-background p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="relative h-7 w-7 overflow-hidden rounded-full border bg-foreground/5">
-                        {qUserAvatarSrc ? (
-                          <Image
-                            src={qUserAvatarSrc}
-                            alt={qUser.name}
-                            fill
-                            className="object-cover"
-                            sizes="28px"
-                            unoptimized={qUserAvatarSrc.startsWith("/uploads/")}
-                          />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground/70">
-                            {initials(qUser.name)}
-                          </span>
-                        )}
-                      </span>
-                      <Link
-                        href={`/users/${qUser.id}`}
-                        className="text-sm font-medium hover:underline"
-                      >
-                        {qUser.name}
-                      </Link>
+                    {/* Favorite Button Absolute */}
+                    <div className="absolute top-4 right-4">
+                        <FavoriteButton 
+                            productId={product.id} 
+                            initialIsFavorited={isFavorited}
+                            className="text-gray-400 hover:text-red-500 hover:bg-red-50" 
+                        />
                     </div>
+               </div>
 
-                    <div className="text-xs text-foreground/60">{createdLabel}</div>
-                  </div>
+               {/* Seller Info */}
+               <div className="border border-gray-200 rounded-xl p-5 bg-white">
+                   <h4 className="text-sm font-medium text-gray-900 mb-4">Información del vendedor</h4>
+                   
+                   {owner ? (
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="relative w-10 h-10 rounded-full border border-gray-100 bg-gray-50 overflow-hidden">
+                                {owner.avatarUrl ? (
+                                    <Image src={normalizeImageSrc(owner.avatarUrl)} alt={owner.name} fill className="object-cover" />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-sm font-bold text-gray-400">{initials(owner.name)}</div>
+                                )}
+                            </div>
+                            <div>
+                                <Link href={`/users/${owner.id}`} className="text-sm font-medium text-gray-900 hover:text-[#12753e] flex items-center gap-1.5">
+                                    {owner.name}
+                                    {owner.isVerified && <VerifiedBadge />}
+                                </Link>
+                                {(owner.city || owner.state) && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                                        <MapPin className="w-3 h-3 text-gray-400" />
+                                        <span>{owner.city}, {owner.state}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                   ) : (
+                       <div className="text-sm text-gray-500">Vendedor particular</div>
+                   )}
+                    
+                    <Link href={`/users/${owner?.id}`} className="block mt-4 text-xs font-semibold text-[#12753e] hover:text-[#0e5e32]">
+                        Ver productos del vendedor
+                    </Link>
+               </div>
+          </div>
 
-                  <div className="mt-3 text-sm text-foreground/80 whitespace-pre-wrap">
-                    {q.text}
-                  </div>
-
-                  {q.answerText ? (
-                    <div className="mt-4 rounded-lg border bg-foreground/5 p-3">
-                      <div className="text-xs font-medium text-foreground/70">
-                        Respuesta del vendedor
-                      </div>
-                      <div className="mt-2 text-sm text-foreground/80 whitespace-pre-wrap">
-                        {q.answerText}
-                      </div>
-                    </div>
-                  ) : isOwner ? (
-                    <form
-                      className="mt-4 grid gap-2"
-                      action={answerProductQuestion.bind(null, q.id)}
-                    >
-                      <textarea
-                        name="answerText"
-                        className="min-h-[70px] rounded-md border bg-background px-3 py-2 text-sm"
-                        placeholder="Responder pregunta..."
-                        required
-                      />
-                      <div>
-                        <button
-                          type="submit"
-                          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-                        >
-                          Responder
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-
-      <div className="mt-8 rounded-2xl border bg-background p-6" id="reviews">
-        <ProductReviews productId={product.id} />
-      </div>
-
+       </div>
     </section>
   );
 }

@@ -52,9 +52,15 @@ export async function adminUpdateUser(formData: FormData) {
   const role = formData.get("role") as UserRole;
 
   // File Uploads
+  const avatarFile = formData.get("avatar");
   const documentFrontFile = formData.get("documentFront");
   const documentBackFile = formData.get("documentBack");
   const identitySelfieFile = formData.get("identitySelfie");
+
+  let avatarUrl: string | undefined;
+  if (avatarFile instanceof File && avatarFile.size > 0) {
+    avatarUrl = await saveUploadedFile(avatarFile, "avatars");
+  }
 
   let documentFrontUrl: string | undefined;
   if (documentFrontFile instanceof File && documentFrontFile.size > 0) {
@@ -79,6 +85,7 @@ export async function adminUpdateUser(formData: FormData) {
         phone, 
         dni, 
         role,
+        ...(avatarUrl ? { avatarUrl } : {}),
         ...(documentFrontUrl ? { documentFrontUrl } : {}),
         ...(documentBackUrl ? { documentBackUrl } : {}),
         ...(identitySelfieUrl ? { identitySelfieUrl } : {}),
@@ -127,4 +134,26 @@ export async function adminDisable2FA(userId: string) {
     }
 
     revalidatePath(`/admin/users/${userId}`);
+}
+
+export async function adminUpdateMembership(userId: string, monthsToAdd: number) {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("User not found");
+
+  const currentExpiry = user.membershipExpiresAt && user.membershipExpiresAt > new Date() 
+    ? user.membershipExpiresAt 
+    : new Date();
+
+  // Add months
+  const newExpiry = new Date(currentExpiry);
+  newExpiry.setMonth(newExpiry.getMonth() + monthsToAdd);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { membershipExpiresAt: newExpiry }
+  });
+
+  revalidatePath(`/admin/users/${userId}`);
 }

@@ -25,7 +25,7 @@ export async function SiteHeader() {
             select: { id: true, status: true, deliveryStatus: true, updatedAt: true, claim: { select: { status: true } } }
         });
         
-        const orderNotifs = orders.map(o => {
+        const orderNotifs = orders.map((o: any) => {
             let title = "Actualización de pedido";
             let desc = `Tu pedido está en proceso.`;
             let type: 'info' | 'success' | 'warning' | 'error' = 'info';
@@ -70,7 +70,7 @@ export async function SiteHeader() {
                 take: 5
             });
 
-            const adminNotifs = claims.map(c => ({
+            const adminNotifs = claims.map((c: any) => ({
                 id: c.id,
                 title: "⚠️ Nuevo Reclamo",
                 description: `Usuario ${c.user.name} inició un reclamo. Orden #${c.order.id.slice(-4)}. Motivo: ${c.type}`,
@@ -159,7 +159,6 @@ export async function SiteHeader() {
                 </div>
 
                 <Link href="/products?filter=offers" className="hover:text-white transition-colors opacity-80 hover:opacity-100 font-light">Ofertas</Link>
-                <Link href="/orders" className="hover:text-white transition-colors opacity-80 hover:opacity-100 font-light">Historial</Link>
                 <Link href="/vender" className="hover:text-white transition-colors opacity-80 hover:opacity-100 font-light">Vender</Link>
                 <Link href="/help" className="hover:text-white transition-colors opacity-80 hover:opacity-100 font-light">Ayuda</Link>
             </div>
@@ -186,6 +185,8 @@ export async function SiteHeader() {
                          <Link href="/favorites" className="hover:opacity-100 opacity-90 font-light hidden lg:block">
                             Favoritos
                         </Link>
+
+
                         
                         <NotificationsMenu notifications={notifications} />
 

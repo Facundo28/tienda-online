@@ -33,13 +33,13 @@ function addItemToCart(cart: Cart, item: Props["product"], quantity = 1): Cart {
   };
 }
 
-export function BuyNowButton({ product }: Props) {
+export function BuyNowButton({ product, className }: Props & { className?: string }) {
   const router = useRouter();
 
   return (
     <button
       type="button"
-      className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
+      className={className || "inline-flex w-full items-center justify-center rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"}
       onClick={() => {
         const cart = loadCart();
         const next = addItemToCart(cart, product, 1);

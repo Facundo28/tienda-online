@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { DeliveryActions } from "./DeliveryActions";
+import { MapPin, Phone, Map, ShieldAlert } from "lucide-react";
 
 export default async function DeliveryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -34,12 +35,12 @@ export default async function DeliveryDetailPage({ params }: { params: Promise<{
            <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=Argentina&zoom=6&size=800x400&sensor=false')] bg-cover bg-center opacity-30 grayscale mix-blend-multiply" />
            <div className="absolute inset-0 flex items-center justify-center">
                <span className="bg-white/90 px-4 py-2 rounded-full text-xs font-bold backdrop-blur shadow-sm border border-gray-100 flex items-center gap-1">
-                   📍 {order.city}
+                   <MapPin className="w-4 h-4 text-red-500" /> {order.city}
                </span>
            </div>
        </div>
 
-       <div className="p-6 space-y-6 -mt-6 bg-white rounded-t-3xl relative z-10 min-h-screen shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+       <div className="p-6 space-y-6 -mt-6 bg-white rounded-t-3xl relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] pb-32">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">{order.customerName}</h1>
@@ -48,10 +49,10 @@ export default async function DeliveryDetailPage({ params }: { params: Promise<{
                 
                 <div className="flex gap-3 mt-6">
                     <a href={`tel:${order.customerPhone}`} className="flex-1 bg-gray-50 py-3 rounded-xl text-center font-bold text-gray-700 hover:bg-gray-100 border border-gray-100 transition-colors flex items-center justify-center gap-2">
-                        📞 Llamar
+                        <Phone className="w-5 h-5" /> Llamar
                     </a>
                     <a href={mapsLink} target="_blank" className="flex-1 bg-blue-50 py-3 rounded-xl text-center font-bold text-blue-700 hover:bg-blue-100 border border-blue-100 transition-colors flex items-center justify-center gap-2">
-                        🗺️ Mapa
+                        <Map className="w-5 h-5" /> Mapa
                     </a>
                 </div>
             </div>
@@ -76,7 +77,7 @@ export default async function DeliveryDetailPage({ params }: { params: Promise<{
 
             <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-100">
                 <h4 className="font-bold text-yellow-800 text-sm mb-2 flex items-center gap-2">
-                    ⚠️ Protocolo de Seguridad
+                    <ShieldAlert className="w-5 h-5" /> Protocolo de Seguridad
                 </h4>
                 <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1.5 opacity-90">
                     <li>Verifica que estás en la dirección correcta.</li>
@@ -86,7 +87,7 @@ export default async function DeliveryDetailPage({ params }: { params: Promise<{
             </div>
             
             {/* Height Spacer for fixed bottom bar */}
-            <div className="h-20" />
+            {/* Padding handled by container */}
             
             <DeliveryActions orderId={order.id} />
        </div>

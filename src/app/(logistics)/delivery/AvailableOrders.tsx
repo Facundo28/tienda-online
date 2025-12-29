@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
-import { revalidatePath } from "next/cache";
-import { MapPin, ArrowRight } from "lucide-react";
+import { DeliveryStatus } from "@/generated/prisma/enums";
+import { assignOrderToMe } from "./actions";
+import { MapPin, DollarSign, Package, Navigation, Clock } from "lucide-react";
 
 export async function AvailableOrdersSection() {
     const user = await requireUser();
     
     // Find orders with NO courier, but meant for Delivery
-    const pool = await prisma.order.findMany({
+    const availableOrders = await prisma.order.findMany({
         where: {
             courierId: null,
             deliveryMethod: "DELIVERY",
@@ -18,55 +19,68 @@ export async function AvailableOrdersSection() {
         take: 5
     });
 
-    if (pool.length === 0) return null;
-
-    async function acceptOrder(formData: FormData) {
-        "use server";
-        const orderId = formData.get("orderId") as string;
-        const currentUser = await requireUser();
-        
-        await prisma.order.update({
-            where: { id: orderId },
-            data: {
-                courierId: currentUser.id,
-                deliveryStatus: "ASSIGNED" // Or ON_WAY
-            }
-        });
-        revalidatePath("/delivery");
-    }
-
-
+    if (availableOrders.length === 0) return null;
 
     return (
-        <div className="space-y-4">
-            <h2 className="font-bold text-gray-700 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
-                Disponibles para ti
-            </h2>
-            <div className="grid gap-3">
-                {pool.map(order => (
-                    <div key={order.id} className="bg-white border-l-4 border-green-500 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-3">
-                            <div>
-                                <h3 className="font-bold text-gray-900">{order.customerName}</h3>
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {order.addressLine1}
-                                </p>
+        <section className="px-1">
+            <div className="flex items-center justify-between mb-4 px-1">
+                <h2 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
+                    Disponibles cerca
+                </h2>
+                <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg">
+                    {availableOrders.length} nuevos
+                </span>
+            </div>
+
+            <div className="space-y-4">
+                {availableOrders.map((order: any) => (
+                    <div key={order.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 hover:shadow-lg transition-all relative overflow-hidden group">
+                        
+                        <div className="flex gap-4 items-start">
+                            {/* Icon Box */}
+                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0 text-blue-500 mt-1">
+                                <Package className="w-6 h-6" />
                             </div>
-                            <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-1 rounded">
-                                NUEVO
-                            </span>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-gray-900 text-lg leading-tight mb-1 truncate">
+                                    {order.city || "Ciudad Desconocida"}
+                                </h4>
+                                <div className="flex items-start gap-1.5 text-gray-500 text-sm mb-3">
+                                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
+                                    <span className="line-clamp-2 leading-snug">{order.addressLine1}</span>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-50 text-green-700 text-sm font-bold">
+                                        <DollarSign className="w-4 h-4" />
+                                        <span>$1.200</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 text-gray-500 text-xs font-medium">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        <span>2.5 km</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <div className="self-center pl-2">
+                                <form action={assignOrderToMe.bind(null, order.id)}>
+                                    <button 
+                                        type="submit"
+                                        className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 active:scale-95 transition-all"
+                                        title="Aceptar Pedido"
+                                    >
+                                        <Navigation className="w-5 h-5" />
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                        <form action={acceptOrder}>
-                            <input type="hidden" name="orderId" value={order.id} />
-                            <button className="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-green-700 shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
-                                ACEPTAR ENVÍO <ArrowRight className="w-4 h-4" />
-                            </button>
-                        </form>
                     </div>
                 ))}
             </div>
-        </div>
+        </section>
     );
 }
