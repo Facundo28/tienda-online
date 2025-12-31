@@ -84,7 +84,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
                     </h2>
                 </div>
                 <div className="divide-y divide-gray-100">
-                    {order.items.map(item => (
+                    {order.items.map((item: any) => (
                         <div key={item.id} className="p-4 flex gap-4 items-center hover:bg-gray-50 transition-colors">
                              <div className="h-16 w-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
                                  {/* Image would go here */}

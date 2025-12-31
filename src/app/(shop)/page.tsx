@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { AdCarousel } from "@/components/AdCarousel";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import { RecentlyViewed } from "@/components/products/RecentlyViewed";
 import { formatCurrencyFromCents } from "@/lib/money";
 import { BadgeCheck } from "lucide-react";
 
@@ -59,10 +60,10 @@ export default async function HomePage() {
          {banners.length > 0 ? (
              <AdCarousel banners={banners} />
          ) : (
-            <div className="relative w-full aspect-[3/1] md:aspect-[4/1] bg-gradient-to-r from-[#12753e] to-[#0e5c30] rounded-2xl overflow-hidden flex items-center px-12 text-white shadow-lg">
-                <div className="relative z-10 max-w-lg">
-                <h2 className="text-4xl font-extrabold mb-4 tracking-tight">Bienvenido a Market Online</h2>
-                <p className="text-lg text-emerald-100 mb-6 font-medium">La plataforma más segura para comprar y vender cerca de ti.</p>
+            <div className="relative w-full h-auto py-8 md:py-0 md:h-[200px] bg-gradient-to-r from-[#12753e] to-[#0e5c30] rounded-2xl overflow-hidden flex items-center px-6 md:px-10 text-white shadow-lg">
+                <div className="relative z-10 max-w-lg pr-4">
+                <h2 className="text-xl md:text-3xl font-extrabold mb-2 tracking-tight leading-tight">Bienvenido a Market E.C</h2>
+                <p className="text-sm md:text-base text-emerald-100 mb-4 font-medium leading-normal">La plataforma más segura para comprar y vender cerca de ti.</p>
                 {!user && (
                     <Link href="/auth/login" className="bg-white text-[#12753e] px-6 py-3 rounded-full font-bold shadow-md hover:scale-105 transition-transform">
                     Comenzar Ahora
@@ -75,7 +76,7 @@ export default async function HomePage() {
          )}
       </section>
 
-      <div className="mt-8">
+      <div className="mt-8 max-w-6xl mx-auto px-6 pb-8">
         <h2 className="text-lg font-semibold">Productos</h2>
         <p className="mt-1 text-sm text-foreground/70">
           {user
@@ -168,6 +169,8 @@ export default async function HomePage() {
             })}
           </ul>
         )}
+
+        <RecentlyViewed />
       </div>
     </div>
   );

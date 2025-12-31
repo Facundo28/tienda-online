@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { formatCurrencyFromCents } from "@/lib/money";
 import Link from "next/link";
 import { DeliveryStatus } from "@/generated/prisma/enums";
+import { ConfirmReceiptButton } from "@/components/ConfirmReceiptButton";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -93,6 +94,15 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <span>{formatCurrencyFromCents(order.totalCents)}</span>
           </div>
       </div>
+      
+      {/* Receipt Confirmation */}
+      {order.status !== 'CANCELLED' && (
+          <ConfirmReceiptButton 
+              orderId={order.id} 
+              isDelivered={order.deliveryStatus === 'DELIVERED'} 
+              fundsReleased={order.fundsReleased}
+          />
+      )}
       
       <div className="text-center">
           <Link href="/orders" className="text-sm text-blue-600 hover:underline">

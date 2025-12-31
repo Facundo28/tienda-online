@@ -2,34 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Shield, MapPin, ShoppingBag, LogOut } from "lucide-react";
+import { User, Shield, MapPin, ShoppingBag, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const items = [
-  {
-    title: "Mi Perfil",
-    href: "/account/profile",
-    icon: User,
-  },
-  {
-    title: "Seguridad",
-    href: "/account/security",
-    icon: Shield,
-  },
-  {
-    title: "Direcciones",
-    href: "/account/address", // Mapping to existing address flow
-    icon: MapPin,
-  },
-  {
-    title: "Mis Compras",
-    href: "/orders", // Redirects out of account layout usually, or we can keep it here
-    icon: ShoppingBag,
-  },
-];
 
 export function AccountSidebar() {
   const pathname = usePathname();
+
+  const items = [
+    {
+      title: "Mi Perfil",
+      href: "/account/profile",
+      icon: User,
+    },
+    {
+      title: "Seguridad",
+      href: "/account/security",
+      icon: Shield,
+    },
+    {
+      title: "Direcciones",
+      href: "/account/address", 
+      icon: MapPin,
+    },
+    {
+       title: "Mi Página",
+       href: "/account/premium",
+       icon: LayoutTemplate
+    },
+  ];
 
   return (
     <nav className="space-y-1">

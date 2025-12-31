@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Truck,
-  Building2
+  Building2,
+  Image
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils"; // Assuming utility exists, if not I'll create it or use standard className
@@ -25,6 +26,7 @@ const menuItems = [
   { href: "/admin/products", label: "Productos", icon: Package },
   { href: "/admin/orders", label: "Ventas", icon: ShoppingBag },
   { href: "/admin/claims", label: "Reclamos", icon: AlertTriangle },
+  { href: "/admin/ads", label: "Publicidad", icon: Image },
   // { href: "/admin/settings", label: "Configuración", icon: Settings },
   { href: "/", label: "Ir a la Tienda", icon: ShoppingBag }, // External/Home link
 ];

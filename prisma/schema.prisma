@@ -22,6 +22,7 @@ model Product {
   stock       Int      @default(1)
   condition   String   @default("NEW") // "NEW" | "USED"
   boostedUntil DateTime?
+  isDeleted   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -82,6 +83,7 @@ model Order {
   status        OrderStatus @default(PENDING)
   deliveryMethod DeliveryMethod @default(PICKUP)
   deliveryStatus DeliveryStatus @default(PENDING)
+  paymentMethod  PaymentMethod?
   pickupCode     String?
   fundsReleased  Boolean        @default(false)
   fundsReleaseAt DateTime?
@@ -106,6 +108,12 @@ model Order {
 
   courierId        String?
   courier          User?     @relation("OrderCourier", fields: [courierId], references: [id], onDelete: SetNull)
+
+  messages         OrderMessage[]
+  
+  // Cancellations & Refunds
+  cancellationReason String?
+  refundStatus       RefundStatus @default(NONE)
 }
 
 model OrderItem {
@@ -144,6 +152,7 @@ model User {
   documentBackUrl  String?
   identitySelfieUrl String?
   identityDocUrl  String? // Deprecated in favor of Front/Back, keep for legacy or extra docs 
+  notifications   Notification[]
   
   // Reputation
   reputationScore Int            @default(50) // Start neutral
@@ -178,6 +187,7 @@ model User {
   products Product[]
   questions ProductQuestion[]
   orders    Order[]
+  messages  OrderMessage[]
   favorites Favorite[]
   reviews   Review[]
   claims    Claim[]
@@ -189,7 +199,10 @@ model User {
   lastLocationUpdate DateTime?
 
   // Premium / Seller Profile
+  storeName         String?  // Nombre fantasía para la tienda oficial
   bannerUrl         String?
+  aboutText         String?
+  socialWhatsapp    String?
   socialInstagram   String?
   socialFacebook    String?
   socialWebsite     String?
@@ -260,6 +273,12 @@ enum OrderStatus {
   CANCELLED
   FULFILLED
   DISPUTED
+}
+
+enum PaymentMethod {
+  CARD
+  TRANSFER
+  CASH
 }
 
 enum UserRole {
@@ -351,3 +370,48 @@ model AdBanner {
   updatedAt   DateTime @updatedAt
 }
 
+model Announcement {
+  id        String   @id @default(cuid())
+  text      String
+  isActive  Boolean  @default(true)
+  position  String   @default("TOP_BAR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderMessage {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  attachmentUrl String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  href      String?
+  read      Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+}
+
+enum RefundStatus {
+  NONE
+  PENDING
+  COMPLETED
+  REJECTED
+}

@@ -24,7 +24,7 @@ async function main() {
       await prisma.claim.deleteMany();
       await prisma.order.deleteMany();
       await prisma.product.deleteMany();
-      await prisma.logisticsWorker.deleteMany();
+      // await prisma.logisticsWorker.deleteMany(); // Removed
       await prisma.logisticsCompany.deleteMany();
       await prisma.adBanner.deleteMany();
       await prisma.auditLog.deleteMany();
@@ -62,18 +62,6 @@ async function main() {
   });
   console.log("👤 Created User: user@market.com");
 
-  // DRIVER
-  const driver = await prisma.user.create({
-    data: {
-      name: "Driver Demo",
-      email: "driver@market.com",
-      passwordHash: hashedPassword,
-      role: "DRIVER",
-      isVerified: true,
-    },
-  });
-  console.log("👤 Created Driver: driver@market.com");
-
   // LOGISTICS ADMIN
   const logisticsOwner = await prisma.user.create({
     data: {
@@ -92,25 +80,31 @@ async function main() {
     data: {
       name: "Logística Veloz S.A.",
       cuit: "30-12345678-9",
+      email: "logistica@veloz.com",
+      phone: "11-1234-5678",
       address: "Av. Corrientes 1234, CABA",
       ownerId: logisticsOwner.id,
-      baseFee: 1500,
-      pricePerKm: 100,
+      // baseFee: 1500, // Removed
+      // pricePerKm: 100, // Removed
       isVerified: true,
     },
   });
   console.log("🚚 Created Logistics Company: Logística Veloz S.A.");
 
-  // Link Driver
-  await prisma.logisticsWorker.create({
+  // DRIVER (Linked to Company)
+  await prisma.user.create({
     data: {
-      userId: driver.id,
-      companyId: company.id,
-      joinedAt: new Date(),
-      vehicleType: "MOTORCYCLE",
+      name: "Driver Demo",
+      email: "driver@market.com",
+      passwordHash: hashedPassword,
+      role: "DRIVER",
+      isVerified: true,
+      workerOfId: company.id, // Linked here
+      vehicleType: "MOTO",
       vehiclePlate: "ABC 123",
-    }
+    },
   });
+  console.log("👤 Created Driver: driver@market.com (Linked to Company)");
 
   console.log("✅ Seeding finished.");
 }
@@ -123,4 +117,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

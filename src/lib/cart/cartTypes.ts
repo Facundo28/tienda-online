@@ -3,6 +3,10 @@ export type CartItem = {
   name: string;
   priceCents: number;
   quantity: number;
+  sellerId?: string;
+  sellerName?: string;
+  sellerIsVerified?: boolean;
+  imageUrl?: string;
 };
 
 export type Cart = {

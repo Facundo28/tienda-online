@@ -30,22 +30,28 @@ export default async function NewProductPage() {
       
       const finalImageUrl = imageUrls.join("\n");
 
-      // Basic validation
-      if(!name || !price) throw new Error("Datos incorrectos");
+      try {
+          // Basic validation
+          if(!name || !price) throw new Error("Datos incorrectos");
 
-      await prisma.product.create({
-          data: {
-              name,
-              priceCents: Math.round(price),
-              description,
-              category: category || "OTROS",
-              stock,
-              condition,
-              userId: user.id,
-              imageUrl: finalImageUrl || "/placeholder.png",
-              boostedUntil: isBoosted ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null 
-          }
-      });
+          await prisma.product.create({
+              data: {
+                  name,
+                  priceCents: Math.round(price),
+                  description,
+                  category: category || "OTROS",
+                  stock,
+                  condition,
+                  userId: user.id,
+                  imageUrl: finalImageUrl || "/placeholder.png",
+                  boostedUntil: isBoosted ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null 
+              }
+          });
+      } catch (error) {
+          console.error("Error creating product:", error);
+          throw error; // Re-throw so client sees it
+      }
+      
       redirect("/vender");
   }
 

@@ -1,40 +1,14 @@
-"use client";
-import { useUser } from "@/lib/auth/client"; // We'll use client side for printing for now or fetch server side
-import { useEffect, useState } from "react";
-import QRCode from "react-qr-code"; // Needs npm install react-qr-code ? Or use a simple img API?
-// Let's use a simple img API to avoid deps for now, or assume react-qr-code if installed.
-// User didn't ask for deps. I'll use a public API or a simple svg library if available.
-// Actually, `react-qr-code` is standard but might not be in package.json.
-// Safest: Use a library-less approach or assume I can install.
-// I'll assume I can install or user has it. If not, I'll use google charts API for QR as fallback.
-// Better: Use `src/app/seller/orders/[id]/label/page.tsx` as server component.
-
-// RE-WRITING AS SERVER COMPONENT (Standard)
-// Need to handle missing params.
 import { notFound } from "next/navigation";
-import { formatCurrencyFromCents } from "@/lib/money";
-
-// Mock data for now if prisma fails? No, use prisma.
-import { prisma } from "@/lib/prisma"; // This won't work in client component easily without logic. 
-// Let's make it a server component that fetches data and passes to client print view.
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth/session";
+import { PrintButton } from "@/components/PrintButton";
 
 export default async function ShippingLabelPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  
-  // Use a direct import style for prisma if needed, but standard should work.
-  // I need to import prisma from lib.
-  
-  // Since I can't import prisma inside the function easily without cleaner code:
-  // I'll write the full file content properly.
-  return (
-      <ShippingLabelContent id={id} />
-  );
-}
+    const { id } = await params;
+    const user = await getCurrentUser();
 
-import { requireUser } from "@/lib/auth/session";
+    if (!user) return notFound(); // Or redirect to login
 
-async function ShippingLabelContent({ id }: { id: string }) {
-    const user = await requireUser();
     const order = await prisma.order.findUnique({
       where: { id },
       include: { items: { include: { product: true } } }
@@ -42,7 +16,7 @@ async function ShippingLabelContent({ id }: { id: string }) {
 
     if (!order) return notFound();
 
-    // QR Code URL (Google Charts is reliable for MVP without deps)
+    // QR Code URL (using a public API for simplicity)
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${order.id}`;
 
     return (
@@ -51,7 +25,7 @@ async function ShippingLabelContent({ id }: { id: string }) {
                 
                 {/* Header */}
                 <div className="flex justify-between border-b-2 border-black pb-4">
-                    <div className="font-bold text-xl tracking-tighter">MARKET ONLINE</div>
+                    <div className="font-bold text-xl tracking-tighter">MARKET E.C</div>
                     <div className="text-right">
                         <div className="text-[10px] uppercase font-bold text-gray-500">Prioridad</div>
                         <div className="text-xl font-black">STANDARD</div>
@@ -90,20 +64,11 @@ async function ShippingLabelContent({ id }: { id: string }) {
             </div>
 
             <div className="fixed bottom-8 print:hidden flex flex-col items-center gap-2">
-                 <button 
-                    onClick="window.print()" 
-                    className="bg-black text-white px-6 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
-                 >
-                    🖨️ Imprimir Etiqueta
-                 </button>
+                 <PrintButton />
                  <p className="text-xs text-gray-500 bg-white/80 px-2 py-1 rounded">
                     Pega esta etiqueta en la caja visible.
                  </p>
             </div>
-            
-            <script dangerouslySetInnerHTML={{__html: `
-                document.querySelector('button').addEventListener('click', () => window.print());
-            `}} />
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { generateTwoFactorSecret, verifyAndEnableAPP, sendOTP, verifyAndEnableOTP, disableMethod } from "@/app/account/security/actions";
+import { generateTwoFactorSecret, verifyAndEnableAPP, sendOTP, verifyAndEnableOTP, disableMethod } from "@/app/(shop)/account/security/actions";
 import { ShieldCheck, Smartphone, Mail, AlertTriangle } from "lucide-react";
 
 interface Props {

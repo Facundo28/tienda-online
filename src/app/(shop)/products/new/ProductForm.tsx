@@ -161,7 +161,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                 required 
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium" 
+                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#12753e] outline-none transition-all font-medium" 
                                 placeholder="Ej. PlayStation 5 Edición Digital" 
                             />
                         </div>
@@ -177,7 +177,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                         required 
                                         value={price}
                                         onChange={e => setPrice(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono font-bold text-lg" 
+                                        className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#12753e] outline-none transition-all font-mono font-bold text-lg" 
                                         placeholder="0.00" 
                                     />
                                 </div>
@@ -193,7 +193,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                         value={stock}
                                         onChange={e => setStock(e.target.value)}
                                         min="0"
-                                        className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono" 
+                                        className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#12753e] outline-none transition-all font-mono" 
                                         placeholder="1" 
                                     />
                                 </div>
@@ -207,7 +207,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                     name="condition" 
                                     value={condition}
                                     onChange={e => setCondition(e.target.value)}
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#12753e] outline-none"
                                 >
                                     <option value="NEW">Nuevo</option>
                                     <option value="USED">Usado</option>
@@ -220,7 +220,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                     name="category" 
                                     value={category}
                                     onChange={e => setCategory(e.target.value)}
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#12753e] outline-none"
                                 >
                                     <option value="OTROS">Otros</option>
                                     <option value="INDUMENTARIA">Indumentaria</option>
@@ -241,7 +241,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                 rows={6} 
                                 value={description}
                                 onChange={e => setDescription(e.target.value)}
-                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none" 
+                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-[#12753e] outline-none" 
                                 placeholder="Describe las características principales..." 
                             ></textarea>
                         </div>
@@ -251,10 +251,10 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                     <div className="space-y-3">
                          <div className="flex items-center justify-between">
                              <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                 <ImageIcon className="w-4 h-4 text-blue-600" />
+                                 <ImageIcon className="w-4 h-4 text-[#12753e]" />
                                  Fotos ({totalImages}/5)
                              </label>
-                             <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">Máx 10MB c/u</span>
+                             <span className="text-xs text-[#12753e] font-medium bg-green-50 px-2 py-1 rounded">Máx 10MB c/u</span>
                          </div>
                          
                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
@@ -269,18 +269,18 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                              ))}
                              {/* New */}
                              {newFilePreviews.map((url, idx) => (
-                                 <div key={`new-${idx}`} className="relative group aspect-square rounded-lg border overflow-hidden ring-2 ring-blue-500/20">
+                                 <div key={`new-${idx}`} className="relative group aspect-square rounded-lg border overflow-hidden ring-2 ring-[#12753e]/20">
                                      <img src={url} className="w-full h-full object-cover" />
                                      <button type="button" onClick={() => removeNew(idx)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                          <X className="w-3 h-3" />
                                      </button>
-                                     <span className="absolute bottom-1 right-1 text-[8px] bg-blue-600 text-white px-1 rounded">NUEVA</span>
+                                     <span className="absolute bottom-1 right-1 text-[8px] bg-[#12753e] text-white px-1 rounded">NUEVA</span>
                                  </div>
                              ))}
                              
                              {/* Add Btn */}
                              {totalImages < 5 && (
-                                 <label className="aspect-square flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer">
+                                 <label className="aspect-square flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 hover:border-[#12753e] hover:bg-green-50 transition-all cursor-pointer">
                                      <Upload className="w-5 h-5 text-gray-400 mb-1" />
                                      <span className="text-[10px] uppercase font-bold text-gray-400">Subir</span>
                                      <input type="file" accept="image/*" multiple className="hidden" onChange={handleFilesSelected} />
@@ -361,7 +361,7 @@ export default function ProductForm({ user, action, initialData, isEditing = fal
                                 {name || "Título de tu publicación"}
                             </h3>
                          </div>
-                         <p className="text-3xl font-black text-gray-900 tracking-tight">
+                         <p className="text-3xl font-bold text-[#12753e] tracking-tight">
                             {currentPriceVal > 0 ? formatCurrencyFromCents(currentPriceVal * 100) : "$ ---"}
                          </p>
                          

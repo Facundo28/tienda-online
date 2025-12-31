@@ -44,7 +44,7 @@ export function ProductsCategorySelect() {
 
   return (
     <details ref={detailsRef} className="relative group">
-      <summary className="list-none flex items-center gap-1 cursor-pointer text-white/90 hover:text-white text-sm font-light">
+      <summary className="list-none flex items-center gap-2 cursor-pointer bg-white border border-gray-200 hover:border-[#126e30] hover:shadow-md hover:text-[#126e30] px-4 py-1.5 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap transition-all active:scale-95 select-none">
         <span>Categorías</span>
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity">
           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />

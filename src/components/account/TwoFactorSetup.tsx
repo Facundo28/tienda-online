@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { generateTwoFactorSecret, verifyAndEnableTwoFactor, disableTwoFactor } from "@/app/account/security/actions";
+import { generateTwoFactorSecret, verifyAndEnableAPP, disableMethod } from "@/app/(shop)/account/security/actions";
 
 interface TwoFactorSetupProps {
   isEnabled: boolean;
@@ -30,9 +30,9 @@ export function TwoFactorSetup({ isEnabled }: TwoFactorSetupProps) {
   const handleVerify = async () => {
       setLoading(true);
       try {
-          await verifyAndEnableTwoFactor(token);
+          await verifyAndEnableAPP(token);
           toast.success("¡Autenticación de dos pasos activada!");
-          setStep('initial'); // Or success state? The parent revalidates so isEnabled should update
+          setStep('initial'); // Parent revalidates
       } catch (e: any) {
           toast.error(e.message);
       } finally {
@@ -43,7 +43,7 @@ export function TwoFactorSetup({ isEnabled }: TwoFactorSetupProps) {
   const handleDisable = async () => {
       if(!confirm("¿Seguro que quieres desactivar la protección 2FA?")) return;
       try {
-          await disableTwoFactor();
+          await disableMethod("APP");
           toast.success("2FA desactivado");
       } catch(e) {
           toast.error("Error al desactivar");

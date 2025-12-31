@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
-import { DeliveryMethod, DeliveryStatus } from "@/generated/prisma/enums";
+import { DeliveryMethod, DeliveryStatus, PaymentMethod, OrderStatus } from "@/generated/prisma/enums";
 import { generarPalabrasClave } from "@/lib/security/words";
 
 type CheckoutItem = {
@@ -19,6 +19,7 @@ type CheckoutBody = {
   city: string;
   state: string;
   postalCode: string;
+  paymentMethod: PaymentMethod;
   items: CheckoutItem[];
 };
 
@@ -75,45 +76,110 @@ export async function POST(req: Request) {
 
   if (products.length !== productIds.length) {
     return NextResponse.json(
-      { error: "Uno o más productos no existen o no están activos" },
+      { error: "Uno o más productos no existen o no están disponibles" },
       { status: 400 },
     );
   }
 
-  const priceById = new Map(products.map((p) => [p.id, p.priceCents] as const));
+  // Check initial stock availability
+  const productMap = new Map<string, typeof products[0]>(products.map(p => [p.id, p]));
+  for (const item of normalizedItems) {
+      const p = productMap.get(item.productId);
+      if (!p || p.stock < item.quantity) {
+          return NextResponse.json(
+              { error: `Stock insuficiente para ${p?.name || 'producto'}` },
+              { status: 400 }
+          );
+      }
+  }
 
+  const priceById = new Map(products.map((p: any) => [p.id, p.priceCents] as const));
   const totalCents = normalizedItems.reduce((sum, item) => {
     const price = priceById.get(item.productId);
     if (price == null) return sum;
-    return sum + price * item.quantity;
+    return sum + (Number(price) * item.quantity);
   }, 0);
 
-  const order = await prisma.order.create({
-    data: {
-      customerName: body.customerName.trim(),
-      customerEmail: body.customerEmail.trim(),
-      customerPhone: body.customerPhone?.trim() || null,
-      addressLine1: body.addressLine1.trim(),
-      addressLine2: body.addressLine2?.trim() || null,
-      city: body.city.trim(),
-      state: body.state.trim(),
-      postalCode: body.postalCode.trim(),
-      totalCents,
-      userId: user?.id,
-      deliveryMethod: DeliveryMethod.PICKUP,
-      deliveryStatus: DeliveryStatus.PENDING,
-      pickupCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
-      securityKeywords: generarPalabrasClave(),
-      items: {
-        create: normalizedItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          priceCents: priceById.get(item.productId)!,
-        })),
-      },
-    },
-    select: { id: true },
-  });
+  const initialStatus = body.paymentMethod === 'CARD' ? OrderStatus.PAID : OrderStatus.PENDING;
 
-  return NextResponse.json({ orderId: order.id }, { status: 201 });
+  try {
+      const order = await prisma.$transaction(async (tx: any) => {
+          // 1. Decrement Stock & Update Activity
+          for (const item of normalizedItems) {
+              const updated = await tx.product.update({
+                  where: { id: item.productId },
+                  data: { 
+                      stock: { decrement: item.quantity }
+                  }
+              });
+              
+              if (updated.stock < 0) {
+                  throw new Error(`Stock insuficiente para ${updated.name}`);
+              }
+              
+              if (updated.stock === 0) {
+                  await tx.product.update({
+                      where: { id: updated.id },
+                      data: { isActive: false }
+                  });
+              }
+          }
+
+          // 2. Create Order
+          const newOrder = await tx.order.create({
+            data: {
+              customerName: body.customerName.trim(),
+              customerEmail: body.customerEmail.trim(),
+              customerPhone: body.customerPhone?.trim() || null,
+              addressLine1: body.addressLine1.trim(),
+              addressLine2: body.addressLine2?.trim() || null,
+              city: body.city.trim(),
+              state: body.state.trim(),
+              postalCode: body.postalCode.trim(),
+              totalCents,
+              userId: user?.id,
+              
+              status: initialStatus,
+              paymentMethod: body.paymentMethod,
+              
+              deliveryMethod: DeliveryMethod.PICKUP,
+              deliveryStatus: DeliveryStatus.PENDING,
+              pickupCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
+              securityKeywords: generarPalabrasClave(),
+              items: {
+                create: normalizedItems.map((item) => ({
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  priceCents: priceById.get(item.productId)!,
+                })),
+              },
+            },
+            select: { id: true },
+          });
+
+          // 3. Create Notification for Buyer (if User)
+          if (user) {
+              await tx.notification.create({
+                  data: {
+                      userId: user.id,
+                      title: "¡Compra realizada!",
+                      message: `Tu pedido #${newOrder.id.slice(-4)} se registró correctamente. Estado: ${initialStatus === 'PAID' ? 'Pago Acreditado' : 'Pendiente de Pago'}.`,
+                      type: 'SUCCESS',
+                      href: `/orders`
+                  }
+              });
+          }
+
+          return newOrder;
+      });
+
+      return NextResponse.json({ orderId: order.id }, { status: 201 });
+
+  } catch (error: any) {
+      console.error("Checkout Error:", error);
+      return NextResponse.json(
+          { error: error.message || "Error al procesar la compra" },
+          { status: 400 }
+      );
+  }
 }

@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import { loadCart, saveCart } from "@/lib/cart/cartStorage";
-import type { Cart } from "@/lib/cart/cartTypes";
+import { useCart } from "@/lib/cart/useCart";
 
 type Props = {
   product: {
@@ -13,37 +12,22 @@ type Props = {
   };
 };
 
-function addItemToCart(cart: Cart, item: Props["product"], quantity = 1): Cart {
-  const qty = Math.max(1, Math.floor(quantity));
-  const existing = cart.items.find((x) => x.productId === item.id);
 
-  if (existing) {
-    return {
-      items: cart.items.map((x) =>
-        x.productId === item.id ? { ...x, quantity: x.quantity + qty } : x,
-      ),
-    };
-  }
-
-  return {
-    items: [
-      ...cart.items,
-      { productId: item.id, name: item.name, priceCents: item.priceCents, quantity: qty },
-    ],
-  };
-}
 
 export function BuyNowButton({ product, className }: Props & { className?: string }) {
   const router = useRouter();
+  const { addItem } = useCart();
 
   return (
     <button
       type="button"
       className={className || "inline-flex w-full items-center justify-center rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"}
       onClick={() => {
-        const cart = loadCart();
-        const next = addItemToCart(cart, product, 1);
-        saveCart(next);
+        addItem({ 
+            productId: product.id, 
+            name: product.name, 
+            priceCents: product.priceCents 
+        }, 1);
         router.push("/checkout");
       }}
     >

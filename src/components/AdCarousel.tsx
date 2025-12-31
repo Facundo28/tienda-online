@@ -26,7 +26,7 @@ export function AdCarousel({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
 
   return (
-    <div className="relative w-full aspect-[3/1] md:aspect-[4/1] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group">
+    <div className="relative w-full h-[180px] md:h-[300px] bg-gray-100 overflow-hidden shadow-sm group">
       {banners.map((banner, index) => (
         <div
           key={banner.id}
@@ -37,7 +37,7 @@ export function AdCarousel({ banners }: { banners: Banner[] }) {
           {banner.redirectUrl ? (
              <Link href={banner.redirectUrl} className="block w-full h-full relative">
                 <Image 
-                    src={banner.imageUrl.startsWith("http") ? banner.imageUrl : `/${banner.imageUrl}`} 
+                    src={banner.imageUrl.startsWith("http") ? banner.imageUrl : banner.imageUrl.startsWith("/") ? banner.imageUrl : `/${banner.imageUrl}`} 
                     alt={banner.title} 
                     fill 
                     className="object-cover" 
@@ -47,7 +47,7 @@ export function AdCarousel({ banners }: { banners: Banner[] }) {
           ) : (
             <div className="w-full h-full relative">
                  <Image 
-                    src={banner.imageUrl.startsWith("http") ? banner.imageUrl : `/${banner.imageUrl}`} 
+                    src={banner.imageUrl.startsWith("http") ? banner.imageUrl : banner.imageUrl.startsWith("/") ? banner.imageUrl : `/${banner.imageUrl}`} 
                     alt={banner.title} 
                     fill 
                     className="object-cover" 

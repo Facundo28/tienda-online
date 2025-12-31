@@ -5,6 +5,7 @@ import { formatCurrencyFromCents } from "@/lib/money";
 import { requireUser } from "@/lib/auth/session";
 import { ProductCategory } from "@/generated/prisma/enums";
 import { BadgeCheck } from "lucide-react";
+import { ProductFilters } from "@/components/products/ProductFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +24,15 @@ function firstImageUrl(raw: string | null) {
   return first ? normalizeImageSrc(first) : null;
 }
 
-function initials(name: string) {
-  const parts = name.trim().split(" ").filter(Boolean);
-  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase());
-  return letters.join("") || "U";
-}
-
 type ProductsPageProps = {
-  searchParams?: Promise<{ category?: string; q?: string }>;
+  searchParams?: Promise<{ 
+    category?: string; 
+    q?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    condition?: string;
+    location?: string;
+  }>;
 };
 
 function parseCategory(value: string | undefined): ProductCategory | null {
@@ -47,134 +49,201 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const resolvedSearchParams = await searchParams;
   const selectedCategory = parseCategory(resolvedSearchParams?.category);
   const query = String(resolvedSearchParams?.q ?? "").trim();
+  const minPrice = resolvedSearchParams?.minPrice ? parseInt(resolvedSearchParams.minPrice) : undefined;
+  const maxPrice = resolvedSearchParams?.maxPrice ? parseInt(resolvedSearchParams.maxPrice) : undefined;
+  const selectedCondition = resolvedSearchParams?.condition;
+  const selectedLocation = resolvedSearchParams?.location;
 
-  const products = await prisma.product.findMany({
-    where: {
+  // Build Where Clause
+  const where: any = {
       isActive: true,
       ...(selectedCategory ? { category: selectedCategory } : {}),
-      ...(query
-        ? {
+      ...(selectedCondition ? { condition: selectedCondition } : {}),
+      ...(query ? {
             OR: [
               { name: { contains: query } },
               { description: { contains: query } },
             ],
+          } : {}),
+      ...(minPrice !== undefined || maxPrice !== undefined ? {
+          priceCents: {
+              ...(minPrice !== undefined ? { gte: minPrice * 100 } : {}),
+              ...(maxPrice !== undefined ? { lte: maxPrice * 100 } : {}),
           }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          isVerified: true,
+      } : {}),
+      ...(selectedLocation ? {
+          user: {
+              OR: [
+                  { city: { contains: selectedLocation } },
+                  { state: { contains: selectedLocation } }
+              ]
+          }
+      } : {})
+  };
+
+  // Parallel Fetch: Products + Aggregations
+  const [products, categoryGroups, conditionGroups] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              isVerified: true,
+              city: true,
+              state: true,
+            },
+          },
         },
-      },
-    },
-  });
+      }),
+      // Aggregations (Independent of filters to show all options? Or dependent? 
+      // Usually dependent on Query but independent of specific facets. 
+      // For simplicity, we fetch Global Active counts for now)
+      prisma.product.groupBy({
+          by: ['category'],
+          where: { isActive: true },
+          _count: true
+      }),
+      prisma.product.groupBy({
+          by: ['condition'],
+          where: { isActive: true },
+          _count: true
+      })
+  ]);
+
+  // Process Aggregations
+  const categories = categoryGroups.map((g: { category: ProductCategory; _count: number }) => ({
+      name: g.category,
+      value: g.category,
+      count: g._count
+  }));
+
+  const conditions = conditionGroups.map((g: { condition: string; _count: number }) => ({
+      name: g.condition === 'NEW' ? 'Nuevo' : 'Usado',
+      value: g.condition,
+      count: g._count
+  }));
+
+  // Aggregating locations from the CURRENT filtered results to ensure relevance
+  const locationCounts = products.reduce((acc: Record<string, number>, p: any) => {
+      const loc = p.user?.city || p.user?.state;
+      if (loc) {
+          acc[loc] = (acc[loc] || 0) + 1;
+      }
+      return acc;
+  }, {} as Record<string, number>);
+
+  const locations = Object.entries(locationCounts).map(([name, count]) => ({
+      name,
+      value: name,
+      count: count as number
+  })).sort((a, b) => b.count - a.count).slice(0, 10); // Top 10
 
   return (
-    <section>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
-          <p className="text-sm text-foreground/70">
-            Agrega productos al carrito y finaliza tu pedido.
-          </p>
-        </div>
-        <Link
-          className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-foreground/5"
-          href="/cart"
-        >
-          Ver carrito
-        </Link>
-      </div>
-
-      {products.length === 0 ? (
-        <div className="mt-6 rounded-2xl border bg-background p-6 text-sm text-foreground/70">
-          Aún no hay productos. Agrega productos en{" "}
-          <Link className="underline" href="/admin/products">
-            Admin
-          </Link>
-          .
-        </div>
-      ) : (
-        <ul className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 bg-gray-50/50 sm:bg-transparent p-2 sm:p-0 rounded-xl">
-          {products.map((p) => {
-            const imageSrc = firstImageUrl(p.imageUrl);
-            const owner = p.user;
-
-            return (
-              <li
-                key={p.id}
-                className="group relative bg-white rounded-xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden border border-gray-100"
-              >
-                <Link
-                  href={`/products/${p.id}`}
-                  className="absolute inset-0 z-10"
-                  aria-label={`Ver ${p.name}`}
-                />
-                
-                {/* Image Section */}
-                <div className="relative aspect-square w-full bg-white border-b border-gray-50 flex items-center justify-center p-8">
-                  {imageSrc ? (
-                    <Image
-                      src={imageSrc}
-                      alt={p.name}
-                      fill
-                      className="object-contain transition-transform duration-300 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 20vw"
-                      unoptimized={imageSrc.startsWith("/uploads/")}
-                    />
-                  ) : (
-                    <div className="text-xs text-gray-300 font-medium">Sin imagen</div>
-                  )}
+    <section className="max-w-[1200px] mx-auto px-4 py-8">
+      
+      <div className="flex flex-col md:flex-row gap-8">
+          
+          {/* Left Sidebar */}
+          <aside className="w-full md:w-64 flex-shrink-0">
+             <div className="sticky top-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{query ? `Resultados para "${query}"` : "Productos"}</h2>
+                <div className="mb-4 text-sm text-gray-500">
+                    {products.length} resultados
                 </div>
 
-                {/* Content Section */}
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                        <div className="font-normal text-2xl text-[#12753e]">
-                          {formatCurrencyFromCents(p.priceCents)}
-                        </div>
-                        
-                         {!p.priceCents || p.priceCents <= 500000 ? (
-                            <p className="text-xs text-green-600 font-bold mt-1">
-                                5% OFF
-                            </p>
-                         ): null}
-                        
-                        <h3 className="mt-3 text-sm font-bold text-gray-900 line-clamp-2 leading-relaxed group-hover:text-[#12753e] transition-colors">
-                            {p.name}
-                        </h3>
-                    </div>
+                <ProductFilters 
+                    categories={categories}
+                    conditions={conditions}
+                    locations={locations}
+                />
+             </div>
+          </aside>
 
-                    {/* Seller Info */}
-                    <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
-                        <div className="relative w-5 h-5 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                            {owner?.avatarUrl ? (
-                                <Image src={normalizeImageSrc(owner.avatarUrl)} alt={owner.name || "Vendedor"} fill className="object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-gray-400">
-                                    {owner?.name?.charAt(0).toUpperCase() || "V"}
+          {/* Main Grid */}
+          <div className="flex-1">
+             
+              {products.length === 0 ? (
+                <div className="rounded-2xl border bg-background p-10 text-center text-foreground/70">
+                  <h3 className="text-lg font-medium text-gray-900">No hay publicaciones que coincidan con tu búsqueda.</h3>
+                  <p className="mt-2 text-sm">Revisá la ortografía de la palabra.</p>
+                  <ul className="mt-2 text-sm list-inside">
+                      <li>Utilizá palabras más genéricas o menos palabras.</li>
+                      <li>Navegá por las categorías para encontrar un producto similar.</li>
+                  </ul>
+                  <div className="mt-6">
+                      <Link className="text-[#12753e] font-medium hover:underline" href="/products">
+                        Ver todos los productos
+                      </Link>
+                  </div>
+                </div>
+              ) : (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                  {products.map((p: any) => {
+                    const imageSrc = firstImageUrl(p.imageUrl);
+                    const owner = p.user;
+
+                    return (
+                      <li
+                        key={p.id}
+                        className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden border border-gray-200"
+                      >
+                        <Link
+                          href={`/products/${p.id}`}
+                          className="absolute inset-0 z-10"
+                          aria-label={`Ver ${p.name}`}
+                        />
+                        
+                        {/* Image Section */}
+                        <div className="relative aspect-square w-full bg-white border-b border-gray-100 flex items-center justify-center p-4">
+                          {imageSrc ? (
+                            <Image
+                              src={imageSrc}
+                              alt={p.name}
+                              fill
+                              className="object-contain transition-transform duration-300 group-hover:scale-105"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 20vw"
+                            />
+                          ) : (
+                            <div className="text-xs text-gray-300 font-medium">Sin imagen</div>
+                          )}
+                        </div>
+
+                        {/* Content Section */}
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                            <div>
+                                <div className="font-normal text-2xl text-gray-900 group-hover:text-[#12753e] transition-colors">
+                                  {formatCurrencyFromCents(p.priceCents)}
+                                </div>
+                                
+                                 {!p.priceCents || p.priceCents <= 500000 ? (
+                                    <span className="text-xs font-semibold text-[#00a650] bg-green-50 px-1.5 py-0.5 rounded mt-1 inline-block">
+                                        5% OFF
+                                    </span>
+                                 ): null}
+                                
+                                <h3 className="mt-2 text-sm font-normal text-gray-600 line-clamp-2 leading-snug">
+                                    {p.name}
+                                </h3>
+                            </div>
+
+                            {/* Seller Info */}
+                            {owner?.isVerified && (
+                                <div className="mt-2 text-xs text-gray-400">
+                                   Por <span className="font-medium text-gray-600">{owner.name}</span>
                                 </div>
                             )}
                         </div>
-                        <span className="text-xs text-gray-400 truncate flex-1 leading-none">
-                            {owner?.name || "Vendedor"}
-                        </span>
-                        {/* @ts-ignore */}
-                        {owner?.isVerified && (
-                            <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                        )}
-                    </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+          </div>
+      </div>
     </section>
   );
 }

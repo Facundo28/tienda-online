@@ -1,4 +1,5 @@
-import { SiteHeader } from "@/components/SiteHeader";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export default function ShopLayout({
   children,
@@ -8,7 +9,8 @@ export default function ShopLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl px-6 py-8 flex-1">{children}</main>
+      <main className="flex-1 w-full">{children}</main>
+      <SiteFooter />
     </div>
   );
 }

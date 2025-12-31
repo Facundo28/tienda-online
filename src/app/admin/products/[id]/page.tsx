@@ -205,7 +205,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {recentOrderItems.length > 0 ? (
-                            recentOrderItems.map(item => (
+                            recentOrderItems.map((item: any) => (
                                 <tr key={item.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-gray-500">
                                         {new Date(item.order.createdAt).toLocaleDateString()}

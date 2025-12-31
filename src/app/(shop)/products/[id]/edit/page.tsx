@@ -88,6 +88,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         initialData={{
             name: product.name,
             description: product.description,
+            price: product.priceCents / 100, // Derived
             priceCents: product.priceCents,
             stock: product.stock,
             condition: product.condition,

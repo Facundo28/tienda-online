@@ -19,7 +19,7 @@ export default async function DeliveryDashboard() {
                   <Package className="w-8 h-8" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Acceso Restringido</h1>
-              <p className="text-gray-500 max-w-sm">Esta área es exclusiva para repartidores verificados de Market Online.</p>
+              <p className="text-gray-500 max-w-sm">Esta área es exclusiva para repartidores verificados de Market E.C.</p>
               <Link href="/" className="mt-6 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold">Volver al Inicio</Link>
           </div>
       );
@@ -195,7 +195,7 @@ export default async function DeliveryDashboard() {
                   <div className="absolute top-0 bottom-0 left-8 w-px bg-gray-100 z-0"></div>
                   
                   <div className="space-y-6 relative z-10">
-                      {todaysDeliveries.map((order, index) => (
+                      {todaysDeliveries.map((order: any, index: number) => (
                           <div key={order.id} className="flex gap-4 group">
                               <div className="w-4 h-4 rounded-full bg-green-500 border-4 border-white shadow-sm flex-shrink-0 mt-1 relative z-10 ring-1 ring-gray-100"></div>
                               <div className="flex-1 pb-2 border-b border-gray-50 last:border-0 last:pb-0">

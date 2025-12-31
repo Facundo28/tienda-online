@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { updatePassword } from "@/app/account/security/actions";
+import { updatePassword } from "@/app/(shop)/account/security/actions";
 
 export function ChangePasswordForm() {
     const [loading, setLoading] = useState(false);

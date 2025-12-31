@@ -10,11 +10,20 @@ import { Package, Calendar, CreditCard, ChevronRight, ShoppingBag, MapPin } from
 
 export const dynamic = "force-dynamic";
 
-export default async function OrdersPage() {
+interface OrdersPageProps {
+  searchParams: Promise<{ filter?: string }>;
+}
+
+export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const user = await requireUser();
+  const { filter } = await searchParams;
+  const showCancelled = filter === 'cancelled';
 
   const orders = await prisma.order.findMany({
-    where: { userId: user.id },
+    where: { 
+        userId: user.id,
+        status: showCancelled ? 'CANCELLED' : { not: 'CANCELLED' }
+    },
     orderBy: { createdAt: "desc" },
     include: {
       claim: { select: { id: true, status: true } },
@@ -75,12 +84,26 @@ export default async function OrdersPage() {
             Gestiona tus pedidos y revisa el estado de tus envíos.
           </p>
         </div>
-        <Link
-          href="/products"
-          className="bg-[#12753e] hover:bg-green-700 text-white font-medium px-6 py-2.5 rounded-full transition-colors shadow-sm flex items-center gap-2"
-        >
-          Ir a la tienda <ChevronRight className="w-4 h-4" />
-        </Link>
+        <div className="flex gap-3">
+             <Link
+              href="/orders"
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!showCancelled ? 'bg-[#12753e] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Mis Compras
+            </Link>
+             <Link
+              href="/orders?filter=cancelled"
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${showCancelled ? 'bg-red-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Productos Cancelados
+            </Link>
+            <Link
+              href="/products"
+              className="ml-2 bg-white border border-gray-200 text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 text-sm"
+            >
+              Ir a la tienda <ChevronRight className="w-4 h-4" />
+            </Link>
+        </div>
       </div>
 
       {orders.length === 0 ? (
@@ -88,16 +111,20 @@ export default async function OrdersPage() {
             <div className="bg-white p-6 rounded-full shadow-sm mb-6">
                 <Package className="w-12 h-12 text-gray-300" />
             </div>
-          <h3 className="text-lg font-semibold text-gray-900">Aún no tienes compras</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+              {showCancelled ? "No tienes productos cancelados" : "Aún no tienes compras"}
+          </h3>
           <p className="text-gray-500 max-w-sm mt-2 mb-8">
-            Explora nuestro catálogo y encuentra los mejores productos al mejor precio.
+             {showCancelled ? "Aquí aparecerán los pedidos que hayas cancelado." : "Explora nuestro catálogo y encuentra los mejores productos al mejor precio."}
           </p>
-          <Link
-            href="/products"
-            className="bg-black text-white px-8 py-3 rounded-xl font-medium hover:bg-gray-800 transition-all shadow-md"
-          >
-            Empezar a comprar
-          </Link>
+          {!showCancelled && (
+            <Link
+                href="/"
+                className="mt-6 inline-block bg-[#12753e] text-white px-6 py-3 rounded-full font-bold hover:bg-[#0e5c30] transition-colors shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            >
+                Empezar a comprar
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid gap-6">
@@ -176,6 +203,21 @@ export default async function OrdersPage() {
                                   Ver Detalle Completo
                               </Link>
                               
+                              <div className="flex gap-2">
+                                  <Link
+                                      href={`/orders/${order.id}/cancel`}
+                                      className={`flex-1 flex items-center justify-center gap-1.5 bg-white border border-red-100 text-red-600 font-medium py-2 rounded-lg hover:bg-red-50 transition-colors text-xs ${order.status === 'CANCELLED' || order.deliveryStatus === 'DELIVERED' ? 'pointer-events-none opacity-50' : ''}`}
+                                  >
+                                      Cancelar
+                                  </Link>
+                                  <Link
+                                      href={`/orders/${order.id}/chat`}
+                                      className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-blue-100 text-blue-600 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors text-xs"
+                                  >
+                                      Chat / Ayuda
+                                  </Link>
+                              </div>
+
                               <DownloadInvoiceButton order={order} />
                               
                               <ClaimButton 

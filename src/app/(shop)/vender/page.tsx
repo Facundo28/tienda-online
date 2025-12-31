@@ -9,7 +9,10 @@ export default async function SellerDashboard() {
   
   // Fetch user's products
   const products = await prisma.product.findMany({
-      where: { userId: user.id },
+      where: { 
+          userId: user.id,
+          isDeleted: false 
+      },
       orderBy: { createdAt: 'desc' }
   });
 
@@ -39,7 +42,7 @@ export default async function SellerDashboard() {
             </div>
              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <p className="text-sm text-gray-500 font-medium">Publicaciones Activas</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{products.filter(p => p.isActive).length}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{products.filter((p: any) => p.isActive).length}</p>
             </div>
              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <p className="text-sm text-gray-500 font-medium">Reclamos</p>
@@ -59,7 +62,7 @@ export default async function SellerDashboard() {
                 </div>
             ) : (
                 <div className="divide-y divide-gray-100">
-                    {products.map(product => (
+                    {products.map((product: any) => (
                         <ProductListItem key={product.id} product={product} />
                     ))}
                 </div>

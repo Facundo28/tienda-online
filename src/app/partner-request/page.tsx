@@ -8,7 +8,7 @@ export default function PartnerRequestPage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Conviértete en Partner Logístico</h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Únete a la red de distribución más segura de Market Online. Buscamos flotas y conductores comprometidos.
+          Únete a la red de distribución más segura de Market E.C. Buscamos flotas y conductores comprometidos.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default function PartnerRequestPage() {
             </div>
 
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <h4 className="font-bold text-gray-900 mb-2">¿Por qué Market Online?</h4>
+                <h4 className="font-bold text-gray-900 mb-2">¿Por qué Market E.C?</h4>
                 <ul className="space-y-3 text-sm text-gray-600">
                     <li className="flex gap-2">
                         <Rocket className="w-5 h-5 text-[#12753e]" />

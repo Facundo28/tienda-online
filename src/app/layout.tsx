@@ -1,26 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+import { CartProvider } from "@/lib/cart/CartContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const outfit = Outfit({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-outfit",
 });
 
 export const metadata: Metadata = {
-  title: "Tienda online",
-  description: "Sistema de ventas online (MVP)",
+  title: "Market E.C",
+  description: "La plataforma más segura para comprar y vender cerca de ti.",
+  icons: {
+    icon: "/icon-cropped.png?v=3",
+    shortcut: "/icon-cropped.png?v=3",
+    apple: "/icon-cropped.png?v=3",
+  },
 };
 
 export default function RootLayout({
@@ -31,11 +30,13 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
+        className={`${outfit.variable} font-sans min-h-screen bg-background text-foreground antialiased`}
+        suppressHydrationWarning={true}
       >
-        {children}
-        <SiteFooter />
-        <Toaster richColors position="top-center" />
+        <CartProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </CartProvider>
       </body>
 
     </html>

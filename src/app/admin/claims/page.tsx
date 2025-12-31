@@ -1,76 +1,76 @@
+"use server";
 
+import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth/session";
-
-export const dynamic = "force-dynamic";
+import Link from "next/link";
+import { formatCurrencyFromCents } from "@/lib/money";
 
 export default async function AdminClaimsPage() {
-  await requireAdmin();
-
-  const claims = await prisma.claim.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { 
-        order: { select: { id: true, customerName: true } },
-        user: { select: { name: true, email: true } }
+    const user = await requireUser();
+    
+    if (user.role !== 'ADMIN') {
+        throw new Error("No autorizado");
     }
-  });
 
-  return (
-    <div className="space-y-6">
-       <div className="flex items-center justify-between">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Gestión de Reclamos</h1>
-                <p className="text-sm text-gray-500">Atención de disputas y devoluciones.</p>
-            </div>
-       </div>
+    const claims = await prisma.claim.findMany({
+        where: { status: 'OPEN' },
+        include: {
+            order: { include: { user: true } },
+            user: true // Claim requester
+        },
+        orderBy: { createdAt: 'desc' }
+    });
 
-       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-         <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-700 border-b">
-                    <tr>
-                        <th className="px-6 py-4 font-semibold">ID Reclamo</th>
-                        <th className="px-6 py-4 font-semibold">Usuario</th>
-                        <th className="px-6 py-4 font-semibold">Pedido Afectado</th>
-                        <th className="px-6 py-4 font-semibold">Motivo</th>
-                        <th className="px-6 py-4 font-semibold">Estado</th>
-                        <th className="px-6 py-4 font-semibold">Fecha</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {claims.length === 0 ? (
-                        <tr><td colSpan={7} className="p-8 text-center text-gray-500">No hay reclamos activos.</td></tr>
-                    ) : (
-                        claims.map(claim => (
-                            <tr key={claim.id} className="hover:bg-gray-50/50">
-                                <td className="px-6 py-4 font-mono text-xs">{claim.id.slice(-8)}</td>
-                                <td className="px-6 py-4">
-                                     <div className="font-medium">{claim.user.name}</div>
-                                     <div className="text-xs text-gray-500">{claim.user.email}</div>
-                                </td>
-                                <td className="px-6 py-4 font-mono text-xs">#{claim.order.id.slice(-8)}</td>
-                                <td className="px-6 py-4">{claim.type}</td>
-                                <td className="px-6 py-4">
-                                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                                        claim.status === 'OPEN' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                                     }`}>
-                                        {claim.status}
-                                     </span>
-                                </td>
-                                <td className="px-6 py-4 text-gray-500">{new Date(claim.createdAt).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <button className="text-[#12753e] hover:underline text-xs font-medium">
-                                        Gestionar
-                                    </button>
+    return (
+        <div className="max-w-6xl mx-auto py-10 px-4">
+            <h1 className="text-3xl font-bold mb-6">Panel de Reclamos y Mediaciones</h1>
+            
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="p-4 font-semibold text-sm">Pedido</th>
+                            <th className="p-4 font-semibold text-sm">Solicitante</th>
+                            <th className="p-4 font-semibold text-sm">Motivo</th>
+                            <th className="p-4 font-semibold text-sm">Fecha</th>
+                            <th className="p-4 font-semibold text-sm">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {claims.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="p-8 text-center text-gray-500">
+                                    No hay reclamos pendientes.
                                 </td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-         </div>
-       </div>
-    </div>
-  );
+                        ) : claims.map((claim: any) => (
+                            <tr key={claim.id} className="hover:bg-gray-50 transition">
+                                <td className="p-4">
+                                    <span className="font-mono bg-gray-100 px-2 py-1 rounded">#{claim.orderId.slice(-8)}</span>
+                                </td>
+                                <td className="p-4">
+                                    <div className="font-medium">{claim.user.name}</div>
+                                    <div className="text-xs text-gray-500">{claim.user.email}</div>
+                                </td>
+                                <td className="p-4 text-sm max-w-xs truncate">
+                                    {claim.description}
+                                </td>
+                                <td className="p-4 text-sm text-gray-500">
+                                    {new Date(claim.createdAt).toLocaleDateString()}
+                                </td>
+                                <td className="p-4">
+                                    <Link 
+                                        href={`/orders/${claim.orderId}/chat`}
+                                        className="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                    >
+                                        Ver Caso
+                                    </Link>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 }

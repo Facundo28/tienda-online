@@ -159,19 +159,15 @@ export async function deleteProduct(id: string) {
       throw new Error("No autorizado");
   }
 
-  try {
-      await prisma.product.delete({ where: { id } });
-  } catch(e: any) {
-      if (e.code === 'P2003') {
-          // Soft delete
-           await prisma.product.update({
-               where: { id },
-               data: { isActive: false }
-           });
-      } else {
-          throw e;
-      }
-  }
+  // Soft Delete mainly to preserve order history
+  await prisma.product.update({
+       where: { id },
+       data: { 
+           isActive: false,
+           isDeleted: true 
+       }
+   });
+
   revalidatePath("/admin/products");
   revalidatePath("/vender");
 }

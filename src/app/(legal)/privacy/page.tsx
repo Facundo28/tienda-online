@@ -8,7 +8,7 @@ export default function PrivacyPage() {
             <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Resumen General</h2>
                 <p>
-                    En <strong>Market Online</strong>, valoramos su privacidad y nos comprometemos a proteger sus datos personales. Esta Política de Privacidad explica cómo recopilamos, usamos y compartimos su información cuando utiliza nuestros servicios.
+                    En <strong>Market E.C</strong>, valoramos su privacidad y nos comprometemos a proteger sus datos personales. Esta Política de Privacidad explica cómo recopilamos, usamos y compartimos su información cuando utiliza nuestros servicios.
                 </p>
             </section>
   
